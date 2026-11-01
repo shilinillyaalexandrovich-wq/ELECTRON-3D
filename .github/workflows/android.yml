@@ -18,13 +18,21 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android build tools
+      - name: Install Android command-line tools
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
+          mkdir -p "$HOME/android-sdk/cmdline-tools"
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/android-tools.zip
+          mkdir -p /tmp/android-tools
+          unzip -q /tmp/android-tools.zip -d /tmp/android-tools
+          mv /tmp/android-tools/cmdline-tools "$HOME/android-sdk/cmdline-tools/latest"
+          echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$HOME/android-sdk/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses
+          sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Godot
         run: |
