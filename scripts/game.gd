@@ -1,7 +1,9 @@
 extends Node3D
 
 const CUSTOMER_SCRIPT = preload("res://scripts/customer.gd")
+const CAREER_SCRIPT = preload("res://scripts/career_manager.gd")
 
+var career
 var player: CharacterBody3D
 var camera: Camera3D
 var customers: Array[Node3D] = []
@@ -17,6 +19,12 @@ var action_button_rect := Rect2()
 var ui_font: Font
 
 func _ready() -> void:
+    career = CAREER_SCRIPT.new()
+    add_child(career)
+    career.load_game()
+    day = career.day
+    money = career.revenue
+    sales = career.sales_count
     _build_store()
     _build_player()
     _spawn_customers()
@@ -121,17 +129,17 @@ func _build_ui() -> void:
 func _draw_hud(hud: Control) -> void:
     var size := hud.get_viewport_rect().size
     hud.draw_rect(Rect2(18, 18, 360, 92), Color(0.025, 0.04, 0.06, 0.88), true)
-    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 52), "ELECTRON  |  ДЕНЬ %d" % day, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.2, 0.85, 1))
-    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 88), "Выручка: %d ₽     Продажи: %d" % [money, sales], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 52), "ELECTRON  |  ДЕНЬ %d  |  %s" % [day, career.current_rank()], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.2, 0.85, 1))
+    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 88), "Выручка: %d ₽   Продажи: %d   Опыт: %d" % [money, sales, career.experience], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
     hud.draw_rect(Rect2(18, size.y - 92, 330, 72), Color(0.025, 0.04, 0.06, 0.82), true)
     hud.draw_string(ThemeDB.fallback_font, Vector2(34, size.y - 63), message, HORIZONTAL_ALIGNMENT_LEFT, 290, 16, Color.WHITE)
-    hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 260, 45), "ПОДОЙДИ К ПОКУПАТЕЛЮ", HORIZONTAL_ALIGNMENT_LEFT, 250, 15, Color(0.7, 0.85, 0.9))
+    hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 300, 45), "ПОДОЙДИ И НАЖМИ «ОБЩАТЬСЯ»", HORIZONTAL_ALIGNMENT_LEFT, 290, 15, Color(0.7, 0.85, 0.9))
     var center := Vector2(92, size.y - 190)
     hud.draw_circle(center, 62, Color(0.05, 0.08, 0.12, 0.45))
     hud.draw_circle(center + joystick_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.8))
     action_button_rect = Rect2(size.x - 150, size.y - 160, 118, 100)
     hud.draw_circle(action_button_rect.get_center(), 48, Color(0.05, 0.62, 0.82, 0.88))
-    hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 191, size.y - 100), "ПРОДАТЬ", HORIZONTAL_ALIGNMENT_CENTER, 120, 17, Color.WHITE)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 191, size.y - 100), "ОБЩАТЬСЯ", HORIZONTAL_ALIGNMENT_CENTER, 120, 17, Color.WHITE)
 
 func _process(delta: float) -> void:
     if message_time > 0:
@@ -199,15 +207,26 @@ func _serve_customer() -> void:
             best = d
             closest = c
     if closest:
-        var price := closest.get_meta("price", 18990)
-        money += int(price)
-        sales += 1
-        message = "Продажа! +%d ₽. Клиент доволен." % int(price)
-        message_time = 4.0
-        closest.queue_free()
-        customers.erase(closest)
-        if customers.size() < 4:
-            _spawn_one_customer()
+        if not closest.get_meta("in_dialogue", false):
+            closest.set_meta("in_dialogue", true)
+            var customer_name: String = closest.customer_name
+            var product_name: String = closest.get_meta("product_name", "смартфон")
+            var budget: int = closest.get_meta("price", 18990)
+            message = "%s: «Ищу %s. Бюджет около %d ₽. Что посоветуете?»" % [customer_name, product_name, budget]
+            message_time = 7.0
+        else:
+            var price := int(closest.get_meta("price", 18990))
+            var result: Dictionary = career.register_sale(price, true)
+            money = career.revenue
+            sales = career.sales_count
+            day = career.day
+            message = "Продажа %d ₽! Комиссия +%d ₽. %s" % [price, result.commission, "Повышение! " + result.rank if result.promoted else "Клиент доволен."]
+            message_time = 5.0
+            career.save_game()
+            closest.queue_free()
+            customers.erase(closest)
+            if customers.size() < 4:
+                _spawn_one_customer()
     else:
         message = "Подойди ближе к покупателю!"
         message_time = 2.5
