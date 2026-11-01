@@ -5,10 +5,25 @@ var patience := 100.0
 var wander_target := Vector3.ZERO
 var wander_timer := 0.0
 var price := 18990
+var customer_type := "Обычный покупатель"
+var product_name := "смартфон"
 
 func _ready() -> void:
-    price = [8990, 12990, 18990, 24990, 35990].pick_random()
+    var profiles := [
+        {"type": "Экономный", "product": "смартфон", "budget": [8990, 12990], "patience": 75.0},
+        {"type": "Требовательный", "product": "ноутбук", "budget": [35990, 49990], "patience": 45.0},
+        {"type": "Спешащий", "product": "наушники", "budget": [4990, 8990], "patience": 25.0},
+        {"type": "Сравнивающий", "product": "телевизор", "budget": [24990, 35990], "patience": 90.0},
+        {"type": "Постоянный", "product": "планшет", "budget": [18990, 24990], "patience": 100.0}
+    ]
+    var profile: Dictionary = profiles.pick_random()
+    customer_type = profile.type
+    product_name = profile.product
+    price = profile.budget.pick_random()
+    patience = profile.patience
     set_meta("price", price)
+    set_meta("product_name", product_name)
+    set_meta("customer_type", customer_type)
     var body := MeshInstance3D.new()
     var capsule := CapsuleMesh.new()
     capsule.radius = 0.32
