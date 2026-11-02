@@ -32,7 +32,7 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses
-          sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmake;3.10.2.4988404" "ndk;23.2.8568313"
+          sdkmanager --sdk_root="$ANDROID_HOME" "cmdline-tools;latest" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmake;3.10.2.4988404" "ndk;23.2.8568313"
 
       - name: Install Godot
         run: |
@@ -64,13 +64,27 @@ jobs:
           export/android/debug_keystore_pass = "android"
           EOF
 
+      - name: Verify Android toolchain
+        run: |
+          test -x "$JAVA_HOME/bin/java"
+          test -x "$ANDROID_HOME/platform-tools/adb"
+          test -f "$HOME/.android/debug.keystore"
+          test -d "$ANDROID_HOME/platforms/android-34"
+          test -d "$ANDROID_HOME/build-tools/34.0.0"
+          test -d "$ANDROID_HOME/ndk/23.2.8568313"
+          test -d "$ANDROID_HOME/cmake/3.10.2.4988404"
+          sdkmanager --sdk_root="$ANDROID_HOME" --list_installed
+
       - name: Import project
-        run: godot --headless --editor --path . --quit
+        run: godot --headless --editor --path . --quit --verbose
 
       - name: Export Android APK
         shell: bash
         run: |
           set -o pipefail
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           godot --headless --verbose --path . --export-debug "Android" ELECTRON-debug.apk 2>&1 | tee godot-export.log
 
       - name: Upload export diagnostics
