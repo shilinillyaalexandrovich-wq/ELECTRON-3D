@@ -10,6 +10,7 @@ var inventory
 var inventory_panel_open := false
 var inventory_row_rects: Array[Rect2] = []
 var inventory_toggle_rect := Rect2()
+var close_day_rect := Rect2()
 var player: CharacterBody3D
 var camera: Camera3D
 var customers: Array[Node3D] = []
@@ -320,6 +321,10 @@ func _draw_hud(hud: Control) -> void:
     hud.draw_rect(inventory_toggle_rect, Color(0.04,0.32,0.42,0.95), true)
     hud.draw_rect(inventory_toggle_rect, Color(0.2,0.82,1.0), false, 2.0)
     hud.draw_string(ThemeDB.fallback_font, inventory_toggle_rect.position + Vector2(20,31), "СКЛАД / ЗАКАЗЫ", HORIZONTAL_ALIGNMENT_LEFT, 140, 16, Color.WHITE)
+    close_day_rect = Rect2(size.x - 176, 120, 150, 42)
+    hud.draw_rect(close_day_rect, Color(0.28,0.22,0.06,0.95), true)
+    hud.draw_rect(close_day_rect, Color(0.95,0.72,0.22), false, 2.0)
+    hud.draw_string(ThemeDB.fallback_font, close_day_rect.position + Vector2(17,27), "ЗАКРЫТЬ ДЕНЬ", HORIZONTAL_ALIGNMENT_LEFT, 140, 15, Color.WHITE)
     inventory_row_rects.clear()
     if inventory_panel_open:
         var panel := Rect2((size.x - 560.0) / 2.0, (size.y - 470.0) / 2.0, 560, 470)
@@ -412,7 +417,13 @@ func _input(event: InputEvent) -> void:
     action_button_rect = _get_action_button_rect(size)
     if event is InputEventScreenTouch:
         if event.pressed:
-            if is_instance_valid(active_customer):
+            if inventory_toggle_rect.has_point(event.position):
+                inventory_panel_open = not inventory_panel_open
+            elif close_day_rect.has_point(event.position) and not inventory_panel_open and not is_instance_valid(active_customer):
+                _close_workday()
+            elif inventory_panel_open:
+                _handle_inventory_tap(event.position)
+            elif is_instance_valid(active_customer):
                 _handle_dialogue_tap(event.position)
             elif center.distance_to(event.position) < 90:
                 joystick_touch = event.index
@@ -653,3 +664,12 @@ func _handle_inventory_tap(position: Vector2) -> void:
             message = str(result.message)
             message_time = 4.0
             return
+
+func _close_workday() -> void:
+    var result: Dictionary = career.close_day()
+    message = "День закрыт! Выручка: %d ₽ / план: %d ₽. Бонус: %d ₽. Зарплата: %d ₽." % [result.revenue,result.target,result.bonus,result.salary_paid]
+    message_time = 7.0
+    day = career.day
+    money = career.revenue
+    sales = career.sales_count
+    career.save_game()
