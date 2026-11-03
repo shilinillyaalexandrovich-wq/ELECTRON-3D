@@ -350,7 +350,8 @@ func _draw_hud(hud: Control) -> void:
         var panel := Rect2(350, size.y - 405, size.x - 380, 112)
         hud.draw_rect(panel, Color(0.025, 0.04, 0.06, 0.94), true)
         hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(18, 30), "ДИАЛОГ С ПОКУПАТЕЛЕМ", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.2, 0.85, 1))
-        var lines := dialogue_text.split("\\n")
+        var lines := dialogue_text.split("\
+")
         for i in range(mini(lines.size(), 2)):
             hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(18, 58 + i * 25), lines[i], HORIZONTAL_ALIGNMENT_LEFT, int(panel.size.x - 30), 18, Color.WHITE)
         for i in range(dialogue_options.size()):
@@ -503,7 +504,8 @@ func _set_dialogue_step() -> void:
     var objection: String = active_customer.get_meta("objection_text","Есть вариант подешевле?")
     match dialogue_step:
         0:
-            dialogue_text = "%s: «Здравствуйте! Ищу %s. Поможете выбрать?»\\nПокупатель: %s" % [customer_name,product_name,customer_type]
+            dialogue_text = "%s: «Здравствуйте! Ищу %s. Поможете выбрать?»\
+Покупатель: %s" % [customer_name,product_name,customer_type]
             dialogue_options = ["Конечно! Расскажите, для чего нужен", "Какой бюджет планируете?", "Покажу самую дорогую модель"]
         1:
             if dialogue_approach == 0:
@@ -578,7 +580,13 @@ func _resolve_customer_sale(honest: bool) -> void:
     if not is_instance_valid(active_customer):
         active_customer = null
         return
-    var product_name := str(active_customer.get_meta("product_name","смартфон"))\n    if not inventory.can_sell(product_name):\n        message = "Товар закончился на складе! Открой «СКЛАД / ЗАКАЗЫ» и пополни запас."\n        message_time = 5.0\n        _end_dialogue_without_sale()\n        return\n    var base_price := int(active_customer.get_meta("price",18990))
+    var product_name := str(active_customer.get_meta("product_name","смартфон"))
+    if not inventory.can_sell(product_name):
+        message = "Товар закончился на складе! Открой «СКЛАД / ЗАКАЗЫ» и пополни запас."
+        message_time = 5.0
+        _end_dialogue_without_sale()
+        return
+    var base_price := int(active_customer.get_meta("price",18990))
     var budget := int(active_customer.get_meta("budget",25000))
     var price := base_price if honest else int(round(base_price*1.12))
     var reputation_bonus := float(career.reputation)/250.0
@@ -592,7 +600,8 @@ func _resolve_customer_sale(honest: bool) -> void:
         message = "%s: «Спасибо, я ещё подумаю». Сделка не состоялась." % customer_name
         message_time = 5.0
     else:
-        inventory.sell(product_name, price)\n        var result: Dictionary = career.register_sale(price,honest)
+        inventory.sell(product_name, price)
+        var result: Dictionary = career.register_sale(price,honest)
         money = career.revenue
         sales = career.sales_count
         day = career.day
