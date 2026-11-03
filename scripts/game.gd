@@ -17,6 +17,7 @@ var joystick_origin := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
 var camera_touch := -1
 var camera_yaw := 0.0
+var camera_vector := Vector2.ZERO
 var camera_sensitivity := 0.006
 var action_button_rect := Rect2()
 var active_customer: Node3D
@@ -52,7 +53,7 @@ func _build_store() -> void:
     _box(Vector3(0, 2.2, -9), Vector3(24, 4.5, 0.3), Color(0.12, 0.16, 0.21))
     _box(Vector3(-11.8, 2.2, 0), Vector3(0.3, 4.5, 18), Color(0.12, 0.16, 0.21))
     _box(Vector3(11.8, 2.2, 0), Vector3(0.3, 4.5, 18), Color(0.12, 0.16, 0.21))
-    _box(Vector3(0, 4.5, 0), Vector3(24, 0.2, 18), Color(0.08, 0.1, 0.13))
+    # Крыша убрана: камера сверху должна видеть персонажа и покупателей.
     _box(Vector3(0, 3.5, -8.78), Vector3(8, 0.65, 0.12), Color(0.05, 0.65, 0.85))
     _box(Vector3(0, 3.5, -8.68), Vector3(7.4, 0.4, 0.08), Color(0.03, 0.12, 0.17))
 
@@ -145,9 +146,12 @@ func _draw_hud(hud: Control) -> void:
     hud.draw_rect(Rect2(18, size.y - 92, 330, 72), Color(0.025, 0.04, 0.06, 0.82), true)
     hud.draw_string(ThemeDB.fallback_font, Vector2(34, size.y - 63), message, HORIZONTAL_ALIGNMENT_LEFT, 290, 16, Color.WHITE)
     hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 330, 45), "СЛЕВА — ДВИЖЕНИЕ  •  СПРАВА — ОБЗОР", HORIZONTAL_ALIGNMENT_LEFT, 320, 15, Color(0.7, 0.85, 0.9))
-    var center := Vector2(92, size.y - 190)
-    hud.draw_circle(center, 62, Color(0.05, 0.08, 0.12, 0.45))
-    hud.draw_circle(center + joystick_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.8))
+    var center := Vector2(92, size.y - 130)
+    hud.draw_circle(center, 62, Color(0.05, 0.08, 0.12, 0.55))
+    hud.draw_circle(center + joystick_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.9))
+    var right_center := Vector2(size.x - 92, size.y - 130)
+    hud.draw_circle(right_center, 62, Color(0.05, 0.08, 0.12, 0.55))
+    hud.draw_circle(right_center + camera_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.9))
     dialogue_rects.clear()
     if is_instance_valid(active_customer):
         action_button_rect = Rect2()
@@ -164,9 +168,9 @@ func _draw_hud(hud: Control) -> void:
             hud.draw_rect(rect, Color(0.18, 0.72, 0.88, 0.9), false, 2.0)
             hud.draw_string(ThemeDB.fallback_font, rect.position + Vector2(14, 33), dialogue_options[i], HORIZONTAL_ALIGNMENT_LEFT, 315, 17, Color.WHITE)
     else:
-        action_button_rect = Rect2(size.x - 150, size.y - 160, 118, 100)
-        hud.draw_circle(action_button_rect.get_center(), 48, Color(0.05, 0.62, 0.82, 0.88))
-        hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 191, size.y - 100), "ОБЩАТЬСЯ", HORIZONTAL_ALIGNMENT_CENTER, 120, 17, Color.WHITE)
+        action_button_rect = _get_action_button_rect(size)
+        hud.draw_circle(action_button_rect.get_center(), 48, Color(0.05, 0.62, 0.82, 0.92))
+        hud.draw_string(ThemeDB.fallback_font, Vector2(action_button_rect.position.x - 4, action_button_rect.position.y + 58), "ОБЩАТЬСЯ", HORIZONTAL_ALIGNMENT_CENTER, 126, 17, Color.WHITE)
 
 func _process(delta: float) -> void:
     if message_time > 0:
@@ -205,15 +209,20 @@ func _update_camera_transform() -> void:
 
 func _input(event: InputEvent) -> void:
     var size := get_viewport().get_visible_rect().size
-    var center := Vector2(92, size.y - 190)
+    var center := Vector2(92, size.y - 130)
+    var right_center := Vector2(size.x - 92, size.y - 130)
+    action_button_rect = _get_action_button_rect(size)
     if event is InputEventScreenTouch:
         if event.pressed:
-            if center.distance_to(event.position) < 90:
+            if is_instance_valid(active_customer):
+                _handle_dialogue_tap(event.position)
+            elif center.distance_to(event.position) < 90:
                 joystick_touch = event.index
                 joystick_origin = center
                 _update_stick(event.position)
-            elif is_instance_valid(active_customer):
-                _handle_dialogue_tap(event.position)
+            elif right_center.distance_to(event.position) < 90:
+                camera_touch = event.index
+                _update_camera_stick(event.position, right_center)
             elif action_button_rect.has_point(event.position):
                 _serve_customer()
             elif event.position.x > size.x * 0.42 and event.position.y < size.y - 185:
@@ -224,31 +233,43 @@ func _input(event: InputEvent) -> void:
                 joystick_vector = Vector2.ZERO
             if event.index == camera_touch:
                 camera_touch = -1
+                camera_vector = Vector2.ZERO
     elif event is InputEventScreenDrag:
         if event.index == joystick_touch:
             _update_stick(event.position)
         elif event.index == camera_touch:
+            _update_camera_stick(event.position, right_center)
             _rotate_camera(event.relative.x)
     elif event is InputEventMouseButton:
         if event.pressed:
             if is_instance_valid(active_customer):
                 _handle_dialogue_tap(event.position)
-            elif action_button_rect.has_point(event.position):
-                _serve_customer()
             elif center.distance_to(event.position) < 90:
                 joystick_touch = 0
                 joystick_origin = center
                 _update_stick(event.position)
+            elif right_center.distance_to(event.position) < 90:
+                camera_touch = 0
+                _update_camera_stick(event.position, right_center)
+            elif action_button_rect.has_point(event.position):
+                _serve_customer()
             elif event.position.x > size.x * 0.42 and event.position.y < size.y - 185:
                 camera_touch = 0
     elif event is InputEventMouseMotion:
         if joystick_touch == 0 and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
             _update_stick(event.position)
         elif camera_touch == 0 and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+            _update_camera_stick(event.position, right_center)
             _rotate_camera(event.relative.x)
+
+func _get_action_button_rect(size: Vector2) -> Rect2:
+    return Rect2(size.x - 166, size.y - 340, 132, 96)
 
 func _update_stick(pos: Vector2) -> void:
     joystick_vector = ((pos - joystick_origin) / 55.0).limit_length(1.0)
+
+func _update_camera_stick(pos: Vector2, origin: Vector2) -> void:
+    camera_vector = ((pos - origin) / 55.0).limit_length(1.0)
 
 func _serve_customer() -> void:
     if is_instance_valid(active_customer):
