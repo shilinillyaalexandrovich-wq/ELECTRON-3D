@@ -255,6 +255,10 @@ func _process(delta: float) -> void:
         message_time -= delta
         if message_time <= 0:
             message = "Найди покупателя и помоги ему с выбором."
+    if is_instance_valid(active_customer) and active_customer.consume_patience(delta):
+        _end_dialogue_without_sale()
+        message = "Покупатель не дождался консультации и ушёл. Следи за его терпением!"
+        message_time = 4.5
     get_viewport().get_camera_3d()
     var hud := get_node_or_null("CanvasLayer/HUD")
     if hud:
@@ -363,6 +367,7 @@ func _serve_customer() -> void:
             closest = customer
     if closest:
         active_customer = closest
+        active_customer.begin_service()
         dialogue_step = 0
         dialogue_quality = 0
         dialogue_approach = 0
@@ -375,26 +380,30 @@ func _set_dialogue_step() -> void:
     if not is_instance_valid(active_customer):
         return
     var customer_name: String = active_customer.customer_name
-    var product_name: String = active_customer.get_meta("product_name", "смартфон")
-    var customer_type: String = active_customer.get_meta("customer_type", "Обычный покупатель")
+    var product_name: String = active_customer.get_meta("product_name","смартфон")
+    var customer_type: String = active_customer.get_meta("customer_type","Обычный покупатель")
+    var need: String = active_customer.get_meta("need_text","для повседневных задач")
+    var priority: String = active_customer.get_meta("priority_text","надёжность и удобство")
+    var budget: int = int(active_customer.get_meta("budget",25000))
+    var objection: String = active_customer.get_meta("objection_text","Есть вариант подешевле?")
     match dialogue_step:
         0:
-            dialogue_text = "%s: «Здравствуйте! Ищу %s. Поможете выбрать?»" % [customer_name, product_name]
-            dialogue_options = ["Конечно! Для чего нужен?", "Сначала узнаем бюджет", "Покажу наши новинки"]
+            dialogue_text = "%s: «Здравствуйте! Ищу %s. Поможете выбрать?»\\nПокупатель: %s" % [customer_name,product_name,customer_type]
+            dialogue_options = ["Конечно! Расскажите, для чего нужен", "Какой бюджет планируете?", "Покажу самую дорогую модель"]
         1:
             if dialogue_approach == 0:
-                dialogue_text = "%s: «Для дома и работы. Хочу, чтобы техника прослужила долго»" % customer_name
+                dialogue_text = "%s: «Мне нужно %s. Главное — %s»" % [customer_name,need,priority]
             elif dialogue_approach == 1:
-                dialogue_text = "%s: «Не хотелось бы переплачивать. Важно уложиться в бюджет»" % customer_name
+                dialogue_text = "%s: «Рассчитываю примерно на %d ₽. Не хочу переплачивать»" % [customer_name,budget]
             else:
-                dialogue_text = "%s: «Люблю современные функции, но объясните, за что плачу»" % customer_name
-            dialogue_options = ["Что для вас важнее всего?", "Подобрать модель под бюджет", "Рассказать о топовой модели"]
+                dialogue_text = "%s: «Люблю новинки, но объясните, за что плачу»" % customer_name
+            dialogue_options = ["Понять, что для вас важнее всего", "Подобрать модель в ваш бюджет", "Предложить флагман с запасом"]
         2:
-            dialogue_text = "%s: «Вариант интересный, но цена кусается. Есть что-нибудь ещё?»" % customer_name
-            dialogue_options = ["Объяснить преимущества", "Показать вариант дешевле", "Предложить небольшую скидку"]
+            dialogue_text = "%s: «%s»" % [customer_name,objection]
+            dialogue_options = ["Объяснить преимущества именно под вашу задачу", "Показать более доступную альтернативу", "Предложить скидку и аксессуар"]
         3:
-            dialogue_text = "%s: «Кажется, я определился. Что предлагаете?»" % customer_name
-            dialogue_options = ["Оформить честную продажу", "Приукрасить характеристики", "Поблагодарить и отпустить"]
+            dialogue_text = "%s: «Цена %d ₽. Как поступим?»" % [customer_name,int(active_customer.get_meta("price",18990))]
+            dialogue_options = ["Оформить честную продажу", "Приукрасить характеристики ради продажи", "Не давить и отпустить клиента"]
         _:
             dialogue_text = ""
             dialogue_options.clear()
@@ -410,19 +419,23 @@ func _choose_dialogue_option(index: int) -> void:
         return
     if dialogue_step == 0:
         dialogue_approach = index
-        dialogue_quality += 1 if index == 0 else 0
+        dialogue_quality += 2 if index == 0 else (1 if index == 1 else 0)
         dialogue_step = 1
     elif dialogue_step == 1:
         if index == 0:
             dialogue_quality += 2
         elif index == 1:
-            dialogue_quality += 1
+            dialogue_quality += 2
+        else:
+            dialogue_quality += 1 if active_customer.customer_type == "Любитель новинок" else -1
         dialogue_step = 2
     elif dialogue_step == 2:
+        var budget := int(active_customer.get_meta("budget",25000))
+        var price := int(active_customer.get_meta("price",18990))
         if index == 0:
             dialogue_quality += 2
         elif index == 1:
-            dialogue_quality += 1
+            dialogue_quality += 2 if price > budget else 1
         else:
             dialogue_quality += 1
         dialogue_step = 3
@@ -450,25 +463,28 @@ func _resolve_customer_sale(honest: bool) -> void:
     if not is_instance_valid(active_customer):
         active_customer = null
         return
-    var base_price := int(active_customer.get_meta("price", 18990))
-    var price := base_price if honest else int(round(base_price * 1.12))
-    var reputation_bonus := float(career.reputation) / 250.0
-    var success_chance := clampf(0.42 + float(dialogue_quality) * 0.12 + reputation_bonus, 0.35, 0.94)
+    var base_price := int(active_customer.get_meta("price",18990))
+    var budget := int(active_customer.get_meta("budget",25000))
+    var price := base_price if honest else int(round(base_price*1.12))
+    var reputation_bonus := float(career.reputation)/250.0
+    var budget_factor := 0.16 if price <= budget else -0.22
+    var patience_factor := float(active_customer.patience_percent())*0.12
+    var success_chance := clampf(0.34+float(dialogue_quality)*0.105+reputation_bonus+budget_factor+patience_factor,0.12,0.94)
     if not honest:
-        success_chance -= 0.08
+        success_chance -= 0.12
     var customer_name: String = active_customer.customer_name
     if randf() > success_chance:
         message = "%s: «Спасибо, я ещё подумаю». Сделка не состоялась." % customer_name
         message_time = 5.0
     else:
-        var result: Dictionary = career.register_sale(price, honest)
+        var result: Dictionary = career.register_sale(price,honest)
         money = career.revenue
         sales = career.sales_count
         day = career.day
         if honest:
-            message = "Продажа состоялась: %d ₽. Комиссия +%d ₽. %s" % [price, result.commission, "Повышение! " + result.rank if result.promoted else "Репутация растёт."]
+            message = "Продажа: %d ₽. Комиссия +%d ₽. %s" % [price,result.commission,"Повышение! "+result.rank if result.promoted else "Репутация растёт."]
         else:
-            message = "Ты приукрасил товар: %d ₽. Комиссия +%d ₽, но репутация снизилась." % [price, result.commission]
+            message = "Продажа с обманом: %d ₽. Комиссия +%d ₽, репутация снизилась." % [price,result.commission]
         message_time = 5.0
         career.save_game()
     var finished_customer := active_customer
