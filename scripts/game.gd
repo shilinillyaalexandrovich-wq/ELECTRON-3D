@@ -66,11 +66,6 @@ func _build_store() -> void:
         for j in range(3):
             _box(Vector3(x - 0.9 + j * 0.9, 2.05, -5.3), Vector3(0.55, 0.8, 0.42), [Color(0.22,0.65,0.9), Color(0.85,0.35,0.18), Color(0.3,0.75,0.45)][j])
 
-    for i in range(3):
-        var z := -1.5 + float(i) * 3.1
-        _box(Vector3(-5.2, 0.65, z), Vector3(3.4, 1.1, 1.4), Color(0.18, 0.22, 0.28))
-        _box(Vector3(5.2, 0.65, z), Vector3(3.4, 1.1, 1.4), Color(0.18, 0.22, 0.28))
-
     var light := DirectionalLight3D.new()
     light.rotation_degrees = Vector3(-55, -25, 0)
     light.light_energy = 1.25
