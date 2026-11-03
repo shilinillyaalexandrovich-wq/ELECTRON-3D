@@ -16,9 +16,13 @@ var joystick_touch := -1
 var joystick_origin := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
 var action_button_rect := Rect2()
-var honest_rect := Rect2()
-var deceive_rect := Rect2()
 var active_customer: Node3D
+var dialogue_step := -1
+var dialogue_text := ""
+var dialogue_options: Array[String] = []
+var dialogue_rects: Array[Rect2] = []
+var dialogue_quality := 0
+var dialogue_approach := 0
 var ui_font: Font
 
 func _ready() -> void:
@@ -140,16 +144,25 @@ func _draw_hud(hud: Control) -> void:
     var center := Vector2(92, size.y - 190)
     hud.draw_circle(center, 62, Color(0.05, 0.08, 0.12, 0.45))
     hud.draw_circle(center + joystick_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.8))
-    action_button_rect = Rect2(size.x - 150, size.y - 160, 118, 100)
-    hud.draw_circle(action_button_rect.get_center(), 48, Color(0.05, 0.62, 0.82, 0.88))
-    hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 191, size.y - 100), "ОБЩАТЬСЯ", HORIZONTAL_ALIGNMENT_CENTER, 120, 17, Color.WHITE)
+    dialogue_rects.clear()
     if is_instance_valid(active_customer):
-        honest_rect = Rect2(size.x - 330, size.y - 275, 145, 62)
-        deceive_rect = Rect2(size.x - 170, size.y - 275, 145, 62)
-        hud.draw_rect(honest_rect, Color(0.08, 0.48, 0.28, 0.94), true)
-        hud.draw_rect(deceive_rect, Color(0.62, 0.22, 0.12, 0.94), true)
-        hud.draw_string(ThemeDB.fallback_font, honest_rect.position + Vector2(16, 38), "ЧЕСТНО", HORIZONTAL_ALIGNMENT_LEFT, 120, 18, Color.WHITE)
-        hud.draw_string(ThemeDB.fallback_font, deceive_rect.position + Vector2(12, 38), "СХИТРИТЬ", HORIZONTAL_ALIGNMENT_LEFT, 125, 18, Color.WHITE)
+        action_button_rect = Rect2()
+        var panel := Rect2(350, size.y - 405, size.x - 380, 112)
+        hud.draw_rect(panel, Color(0.025, 0.04, 0.06, 0.94), true)
+        hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(18, 30), "ДИАЛОГ С ПОКУПАТЕЛЕМ", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.2, 0.85, 1))
+        var lines := dialogue_text.split("\\n")
+        for i in range(mini(lines.size(), 2)):
+            hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(18, 58 + i * 25), lines[i], HORIZONTAL_ALIGNMENT_LEFT, int(panel.size.x - 30), 18, Color.WHITE)
+        for i in range(dialogue_options.size()):
+            var rect := Rect2(size.x - 370, size.y - 280 + i * 62, 340, 52)
+            dialogue_rects.append(rect)
+            hud.draw_rect(rect, Color(0.06, 0.28, 0.38, 0.96), true)
+            hud.draw_rect(rect, Color(0.18, 0.72, 0.88, 0.9), false, 2.0)
+            hud.draw_string(ThemeDB.fallback_font, rect.position + Vector2(14, 33), dialogue_options[i], HORIZONTAL_ALIGNMENT_LEFT, 315, 17, Color.WHITE)
+    else:
+        action_button_rect = Rect2(size.x - 150, size.y - 160, 118, 100)
+        hud.draw_circle(action_button_rect.get_center(), 48, Color(0.05, 0.62, 0.82, 0.88))
+        hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 191, size.y - 100), "ОБЩАТЬСЯ", HORIZONTAL_ALIGNMENT_CENTER, 120, 17, Color.WHITE)
 
 func _process(delta: float) -> void:
     if message_time > 0:
@@ -187,10 +200,8 @@ func _input(event: InputEvent) -> void:
                 joystick_touch = event.index
                 joystick_origin = center
                 _update_stick(event.position)
-            elif honest_rect.has_point(event.position) and is_instance_valid(active_customer):
-                _resolve_customer_sale(true)
-            elif deceive_rect.has_point(event.position) and is_instance_valid(active_customer):
-                _resolve_customer_sale(false)
+            elif is_instance_valid(active_customer):
+                _handle_dialogue_tap(event.position)
             elif action_button_rect.has_point(event.position):
                 _serve_customer()
         elif event.index == joystick_touch:
@@ -199,10 +210,8 @@ func _input(event: InputEvent) -> void:
     elif event is InputEventScreenDrag and event.index == joystick_touch:
         _update_stick(event.position)
     elif event is InputEventMouseButton and event.pressed:
-        if honest_rect.has_point(event.position) and is_instance_valid(active_customer):
-            _resolve_customer_sale(true)
-        elif deceive_rect.has_point(event.position) and is_instance_valid(active_customer):
-            _resolve_customer_sale(false)
+        if is_instance_valid(active_customer):
+            _handle_dialogue_tap(event.position)
         elif action_button_rect.has_point(event.position):
             _serve_customer()
         elif center.distance_to(event.position) < 90:
@@ -216,50 +225,133 @@ func _update_stick(pos: Vector2) -> void:
 
 func _serve_customer() -> void:
     if is_instance_valid(active_customer):
-        message = "Выбери, как поступить с покупателем."
-        message_time = 2.5
         return
     var closest: Node3D
     var best := 3.0
-    for c in customers:
-        if not is_instance_valid(c):
+    for customer in customers:
+        if not is_instance_valid(customer):
             continue
-        var d := player.global_position.distance_to(c.global_position)
-        if d < best:
-            best = d
-            closest = c
+        var distance := player.global_position.distance_to(customer.global_position)
+        if distance < best:
+            best = distance
+            closest = customer
     if closest:
         active_customer = closest
-        var customer_name: String = closest.customer_name
-        var product_name: String = closest.get_meta("product_name", "смартфон")
-        var budget: int = closest.get_meta("price", 18990)
-        message = "%s: «Ищу %s. Бюджет около %d ₽». Выбери подход к продаже." % [customer_name, product_name, budget]
-        message_time = 8.0
+        dialogue_step = 0
+        dialogue_quality = 0
+        dialogue_approach = 0
+        _set_dialogue_step()
     else:
         message = "Подойди ближе к покупателю!"
         message_time = 2.5
+
+func _set_dialogue_step() -> void:
+    if not is_instance_valid(active_customer):
+        return
+    var customer_name: String = active_customer.customer_name
+    var product_name: String = active_customer.get_meta("product_name", "смартфон")
+    var customer_type: String = active_customer.get_meta("customer_type", "Обычный покупатель")
+    match dialogue_step:
+        0:
+            dialogue_text = "%s: «Здравствуйте! Ищу %s. Поможете выбрать?»" % [customer_name, product_name]
+            dialogue_options = ["Конечно! Для чего нужен?", "Сначала узнаем бюджет", "Покажу наши новинки"]
+        1:
+            if dialogue_approach == 0:
+                dialogue_text = "%s: «Для дома и работы. Хочу, чтобы техника прослужила долго»" % customer_name
+            elif dialogue_approach == 1:
+                dialogue_text = "%s: «Не хотелось бы переплачивать. Важно уложиться в бюджет»" % customer_name
+            else:
+                dialogue_text = "%s: «Люблю современные функции, но объясните, за что плачу»" % customer_name
+            dialogue_options = ["Что для вас важнее всего?", "Подобрать модель под бюджет", "Рассказать о топовой модели"]
+        2:
+            dialogue_text = "%s: «Вариант интересный, но цена кусается. Есть что-нибудь ещё?»" % customer_name
+            dialogue_options = ["Объяснить преимущества", "Показать вариант дешевле", "Предложить небольшую скидку"]
+        3:
+            dialogue_text = "%s: «Кажется, я определился. Что предлагаете?»" % customer_name
+            dialogue_options = ["Оформить честную продажу", "Приукрасить характеристики", "Поблагодарить и отпустить"]
+        _:
+            dialogue_text = ""
+            dialogue_options.clear()
+
+func _handle_dialogue_tap(position: Vector2) -> void:
+    for i in range(dialogue_rects.size()):
+        if dialogue_rects[i].has_point(position):
+            _choose_dialogue_option(i)
+            return
+
+func _choose_dialogue_option(index: int) -> void:
+    if not is_instance_valid(active_customer) or index < 0 or index >= dialogue_options.size():
+        return
+    if dialogue_step == 0:
+        dialogue_approach = index
+        dialogue_quality += 1 if index == 0 else 0
+        dialogue_step = 1
+    elif dialogue_step == 1:
+        if index == 0:
+            dialogue_quality += 2
+        elif index == 1:
+            dialogue_quality += 1
+        dialogue_step = 2
+    elif dialogue_step == 2:
+        if index == 0:
+            dialogue_quality += 2
+        elif index == 1:
+            dialogue_quality += 1
+        else:
+            dialogue_quality += 1
+        dialogue_step = 3
+    elif dialogue_step == 3:
+        if index == 2:
+            _end_dialogue_without_sale()
+            return
+        _resolve_customer_sale(index == 0)
+        return
+    _set_dialogue_step()
+
+func _end_dialogue_without_sale() -> void:
+    message = "Ты вежливо попрощался. Покупатель может вернуться позже."
+    message_time = 4.0
+    var customer := active_customer
+    active_customer = null
+    dialogue_step = -1
+    dialogue_options.clear()
+    if is_instance_valid(customer):
+        customers.erase(customer)
+        customer.queue_free()
+    _spawn_one_customer()
 
 func _resolve_customer_sale(honest: bool) -> void:
     if not is_instance_valid(active_customer):
         active_customer = null
         return
-    var price := int(active_customer.get_meta("price", 18990))
-    var result: Dictionary = career.register_sale(price, honest)
-    money = career.revenue
-    sales = career.sales_count
-    day = career.day
-    if honest:
-        message = "Честная продажа: %d ₽. Комиссия +%d ₽. %s" % [price, result.commission, "Повышение! " + result.rank if result.promoted else "Репутация растёт."]
+    var base_price := int(active_customer.get_meta("price", 18990))
+    var price := base_price if honest else int(round(base_price * 1.12))
+    var reputation_bonus := float(career.reputation) / 250.0
+    var success_chance := clampf(0.42 + float(dialogue_quality) * 0.12 + reputation_bonus, 0.35, 0.94)
+    if not honest:
+        success_chance -= 0.08
+    var customer_name: String = active_customer.customer_name
+    if randf() > success_chance:
+        message = "%s: «Спасибо, я ещё подумаю». Сделка не состоялась." % customer_name
+        message_time = 5.0
     else:
-        message = "Ты схитрил: %d ₽. Комиссия +%d ₽, но репутация снизилась." % [price, result.commission]
-    message_time = 5.0
-    career.save_game()
-    var sold_customer := active_customer
+        var result: Dictionary = career.register_sale(price, honest)
+        money = career.revenue
+        sales = career.sales_count
+        day = career.day
+        if honest:
+            message = "Продажа состоялась: %d ₽. Комиссия +%d ₽. %s" % [price, result.commission, "Повышение! " + result.rank if result.promoted else "Репутация растёт."]
+        else:
+            message = "Ты приукрасил товар: %d ₽. Комиссия +%d ₽, но репутация снизилась." % [price, result.commission]
+        message_time = 5.0
+        career.save_game()
+    var finished_customer := active_customer
     active_customer = null
-    customers.erase(sold_customer)
-    sold_customer.queue_free()
-    if customers.size() < 4:
-        _spawn_one_customer()
+    dialogue_step = -1
+    dialogue_options.clear()
+    customers.erase(finished_customer)
+    finished_customer.queue_free()
+    _spawn_one_customer()
 
 func _spawn_one_customer() -> void:
     var c = CUSTOMER_SCRIPT.new()
