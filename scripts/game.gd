@@ -15,6 +15,9 @@ var message_time := 5.0
 var joystick_touch := -1
 var joystick_origin := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
+var camera_touch := -1
+var camera_yaw := 0.0
+var camera_sensitivity := 0.006
 var action_button_rect := Rect2()
 var active_customer: Node3D
 var dialogue_step := -1
@@ -112,6 +115,7 @@ func _build_player() -> void:
     camera = Camera3D.new()
     camera.position = Vector3(0, 5.2, 8.5)
     camera.rotation_degrees = Vector3(-27, 0, 0)
+    camera_yaw = 0.0
     camera.current = true
     player.add_child(camera)
 
@@ -140,7 +144,7 @@ func _draw_hud(hud: Control) -> void:
     hud.draw_string(ThemeDB.fallback_font, Vector2(36, 88), "Выручка: %d ₽   Продажи: %d   Опыт: %d" % [money, sales, career.experience], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
     hud.draw_rect(Rect2(18, size.y - 92, 330, 72), Color(0.025, 0.04, 0.06, 0.82), true)
     hud.draw_string(ThemeDB.fallback_font, Vector2(34, size.y - 63), message, HORIZONTAL_ALIGNMENT_LEFT, 290, 16, Color.WHITE)
-    hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 300, 45), "ПОДОЙДИ И НАЖМИ «ОБЩАТЬСЯ»", HORIZONTAL_ALIGNMENT_LEFT, 290, 15, Color(0.7, 0.85, 0.9))
+    hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 330, 45), "СЛЕВА — ДВИЖЕНИЕ  •  СПРАВА — ОБЗОР", HORIZONTAL_ALIGNMENT_LEFT, 320, 15, Color(0.7, 0.85, 0.9))
     var center := Vector2(92, size.y - 190)
     hud.draw_circle(center, 62, Color(0.05, 0.08, 0.12, 0.45))
     hud.draw_circle(center + joystick_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.8))
@@ -177,7 +181,7 @@ func _process(delta: float) -> void:
 func _physics_process(_delta: float) -> void:
     if not is_instance_valid(player):
         return
-    var direction := Vector3(joystick_vector.x, 0, joystick_vector.y)
+    var direction := Vector3(joystick_vector.x, 0, joystick_vector.y).rotated(Vector3.UP, camera_yaw)
     if direction.length() > 0.08:
         direction = direction.normalized()
         player.velocity.x = direction.x * 4.2
@@ -187,6 +191,7 @@ func _physics_process(_delta: float) -> void:
         player.velocity.x = move_toward(player.velocity.x, 0.0, 20.0 * get_physics_process_delta_time())
         player.velocity.z = move_toward(player.velocity.z, 0.0, 20.0 * get_physics_process_delta_time())
     player.velocity.y = 0
+    camera.rotation.y = camera_yaw - player.rotation.y
     player.move_and_slide()
     player.position.x = clamp(player.position.x, -10.5, 10.5)
     player.position.z = clamp(player.position.z, -7.5, 7.5)
@@ -204,21 +209,36 @@ func _input(event: InputEvent) -> void:
                 _handle_dialogue_tap(event.position)
             elif action_button_rect.has_point(event.position):
                 _serve_customer()
-        elif event.index == joystick_touch:
-            joystick_touch = -1
-            joystick_vector = Vector2.ZERO
-    elif event is InputEventScreenDrag and event.index == joystick_touch:
-        _update_stick(event.position)
-    elif event is InputEventMouseButton and event.pressed:
-        if is_instance_valid(active_customer):
-            _handle_dialogue_tap(event.position)
-        elif action_button_rect.has_point(event.position):
-            _serve_customer()
-        elif center.distance_to(event.position) < 90:
-            joystick_touch = 0
+            elif event.position.x > size.x * 0.42 and event.position.y < size.y - 185:
+                camera_touch = event.index
+        else:
+            if event.index == joystick_touch:
+                joystick_touch = -1
+                joystick_vector = Vector2.ZERO
+            if event.index == camera_touch:
+                camera_touch = -1
+    elif event is InputEventScreenDrag:
+        if event.index == joystick_touch:
             _update_stick(event.position)
-    elif event is InputEventMouseMotion and joystick_touch == 0 and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-        _update_stick(event.position)
+        elif event.index == camera_touch:
+            _rotate_camera(event.relative.x)
+    elif event is InputEventMouseButton:
+        if event.pressed:
+            if is_instance_valid(active_customer):
+                _handle_dialogue_tap(event.position)
+            elif action_button_rect.has_point(event.position):
+                _serve_customer()
+            elif center.distance_to(event.position) < 90:
+                joystick_touch = 0
+                joystick_origin = center
+                _update_stick(event.position)
+            elif event.position.x > size.x * 0.42 and event.position.y < size.y - 185:
+                camera_touch = 0
+    elif event is InputEventMouseMotion:
+        if joystick_touch == 0 and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+            _update_stick(event.position)
+        elif camera_touch == 0 and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+            _rotate_camera(event.relative.x)
 
 func _update_stick(pos: Vector2) -> void:
     joystick_vector = ((pos - joystick_origin) / 55.0).limit_length(1.0)
@@ -374,3 +394,7 @@ func _mat(color: Color) -> StandardMaterial3D:
     material.albedo_color = color
     material.roughness = 0.82
     return material
+
+func _rotate_camera(horizontal_delta: float) -> void:
+    camera_yaw -= horizontal_delta * camera_sensitivity
+    camera_yaw = wrapf(camera_yaw, -TAU, TAU)
