@@ -3,8 +3,13 @@ extends Node3D
 const CUSTOMER_SCRIPT = preload("res://scripts/customer.gd")
 const CHARACTER_MODEL = preload("res://scripts/character_model.gd")
 const CAREER_SCRIPT = preload("res://scripts/career_manager.gd")
+const INVENTORY_SCRIPT = preload("res://scripts/inventory_manager.gd")
 
 var career
+var inventory
+var inventory_panel_open := false
+var inventory_row_rects: Array[Rect2] = []
+var inventory_toggle_rect := Rect2()
 var player: CharacterBody3D
 var camera: Camera3D
 var customers: Array[Node3D] = []
@@ -37,6 +42,8 @@ func _ready() -> void:
     career = CAREER_SCRIPT.new()
     add_child(career)
     career.load_game()
+    inventory = INVENTORY_SCRIPT.new()
+    add_child(inventory)
     day = career.day
     money = career.revenue
     sales = career.sales_count
@@ -269,6 +276,13 @@ func _rival_wins_customer(index: int, customer: Node3D) -> void:
         competitor_service_time[index] = 0.0
         return
     var amount := int(customer.get_meta("price",18990))
+    var product_name := str(customer.get_meta("product_name","смартфон"))
+    if not inventory.sell(product_name, amount):
+        message = "На складе закончился товар: %s. Нужен новый заказ!" % product_name
+        message_time = 4.0
+        competitor_targets[index] = null
+        competitor_service_time[index] = 0.0
+        return
     var rival_commission := int(round(amount*0.025))
     # Соперник забирает клиента: его продажа влияет на общий результат магазина,
     # но личную комиссию игрок не получает.
@@ -302,6 +316,28 @@ func _draw_hud(hud: Control) -> void:
     hud.draw_rect(Rect2(18, size.y - 92, 330, 72), Color(0.025, 0.04, 0.06, 0.82), true)
     hud.draw_string(ThemeDB.fallback_font, Vector2(34, size.y - 63), message, HORIZONTAL_ALIGNMENT_LEFT, 290, 16, Color.WHITE)
     hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 330, 45), "СЛЕВА — ДВИЖЕНИЕ  •  СПРАВА — ОБЗОР", HORIZONTAL_ALIGNMENT_LEFT, 320, 15, Color(0.7, 0.85, 0.9))
+    inventory_toggle_rect = Rect2(size.x - 176, 64, 150, 48)
+    hud.draw_rect(inventory_toggle_rect, Color(0.04,0.32,0.42,0.95), true)
+    hud.draw_rect(inventory_toggle_rect, Color(0.2,0.82,1.0), false, 2.0)
+    hud.draw_string(ThemeDB.fallback_font, inventory_toggle_rect.position + Vector2(20,31), "СКЛАД / ЗАКАЗЫ", HORIZONTAL_ALIGNMENT_LEFT, 140, 16, Color.WHITE)
+    inventory_row_rects.clear()
+    if inventory_panel_open:
+        var panel := Rect2((size.x - 560.0) / 2.0, (size.y - 470.0) / 2.0, 560, 470)
+        hud.draw_rect(panel, Color(0.015,0.025,0.04,0.97), true)
+        hud.draw_rect(panel, Color(0.12,0.72,0.9), false, 3.0)
+        hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(22,35), "УПРАВЛЕНИЕ ЗАПАСАМИ", HORIZONTAL_ALIGNMENT_LEFT, 500, 24, Color(0.2,0.86,1.0))
+        hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(22,66), "Средства магазина: %d ₽   •   Прибыль: %d ₽" % [inventory.store_funds,inventory.total_profit], HORIZONTAL_ALIGNMENT_LEFT, 520, 17, Color.WHITE)
+        var ids := ["смартфон","ноутбук","наушники","телевизор","планшет","техника"]
+        for i in range(ids.size()):
+            var product_id: String = ids[i]
+            var item: Dictionary = inventory.CATALOG[product_id]
+            var row := Rect2(panel.position.x + 18, panel.position.y + 82 + i * 59, 524, 52)
+            inventory_row_rects.append(row)
+            hud.draw_rect(row, Color(0.05,0.1,0.15,0.98), true)
+            hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(12,22), "%s  %s  |  Остаток: %d" % [item["brand"],item["name"],inventory.stock.get(product_id,0)], HORIZONTAL_ALIGNMENT_LEFT, 320, 16, Color.WHITE)
+            hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(12,42), "Закупка: %d ₽ / шт." % int(item["cost"]), HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Color(0.65,0.78,0.84))
+            hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(370,32), "ЗАКАЗАТЬ +3", HORIZONTAL_ALIGNMENT_LEFT, 150, 15, Color(0.2,0.9,1.0))
+        hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(22,455), "Нажми на товар, чтобы заказать 3 единицы. Нажми «СКЛАД» для закрытия.", HORIZONTAL_ALIGNMENT_LEFT, 520, 14, Color(0.72,0.82,0.88))
     var center := Vector2(92, size.y - 130)
     hud.draw_circle(center, 62, Color(0.05, 0.08, 0.12, 0.55))
     hud.draw_circle(center + joystick_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.9))
@@ -542,7 +578,7 @@ func _resolve_customer_sale(honest: bool) -> void:
     if not is_instance_valid(active_customer):
         active_customer = null
         return
-    var base_price := int(active_customer.get_meta("price",18990))
+    var product_name := str(active_customer.get_meta("product_name","смартфон"))\n    if not inventory.can_sell(product_name):\n        message = "Товар закончился на складе! Открой «СКЛАД / ЗАКАЗЫ» и пополни запас."\n        message_time = 5.0\n        _end_dialogue_without_sale()\n        return\n    var base_price := int(active_customer.get_meta("price",18990))
     var budget := int(active_customer.get_meta("budget",25000))
     var price := base_price if honest else int(round(base_price*1.12))
     var reputation_bonus := float(career.reputation)/250.0
@@ -556,7 +592,7 @@ func _resolve_customer_sale(honest: bool) -> void:
         message = "%s: «Спасибо, я ещё подумаю». Сделка не состоялась." % customer_name
         message_time = 5.0
     else:
-        var result: Dictionary = career.register_sale(price,honest)
+        inventory.sell(product_name, price)\n        var result: Dictionary = career.register_sale(price,honest)
         money = career.revenue
         sales = career.sales_count
         day = career.day
@@ -599,3 +635,12 @@ func _mat(color: Color) -> StandardMaterial3D:
 func _rotate_camera(horizontal_delta: float) -> void:
     camera_yaw -= horizontal_delta * camera_sensitivity
     camera_yaw = wrapf(camera_yaw, -TAU, TAU)
+
+func _handle_inventory_tap(position: Vector2) -> void:
+    for i in range(inventory_row_rects.size()):
+        if inventory_row_rects[i].has_point(position):
+            var ids := ["смартфон","ноутбук","наушники","телевизор","планшет","техника"]
+            var result: Dictionary = inventory.order_stock(ids[i],3)
+            message = str(result.message)
+            message_time = 4.0
+            return
