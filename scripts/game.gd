@@ -16,6 +16,9 @@ var joystick_touch := -1
 var joystick_origin := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
 var action_button_rect := Rect2()
+var honest_rect := Rect2()
+var deceive_rect := Rect2()
+var active_customer: Node3D
 var ui_font: Font
 
 func _ready() -> void:
@@ -140,6 +143,13 @@ func _draw_hud(hud: Control) -> void:
     action_button_rect = Rect2(size.x - 150, size.y - 160, 118, 100)
     hud.draw_circle(action_button_rect.get_center(), 48, Color(0.05, 0.62, 0.82, 0.88))
     hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 191, size.y - 100), "ОБЩАТЬСЯ", HORIZONTAL_ALIGNMENT_CENTER, 120, 17, Color.WHITE)
+    if is_instance_valid(active_customer):
+        honest_rect = Rect2(size.x - 330, size.y - 275, 145, 62)
+        deceive_rect = Rect2(size.x - 170, size.y - 275, 145, 62)
+        hud.draw_rect(honest_rect, Color(0.08, 0.48, 0.28, 0.94), true)
+        hud.draw_rect(deceive_rect, Color(0.62, 0.22, 0.12, 0.94), true)
+        hud.draw_string(ThemeDB.fallback_font, honest_rect.position + Vector2(16, 38), "ЧЕСТНО", HORIZONTAL_ALIGNMENT_LEFT, 120, 18, Color.WHITE)
+        hud.draw_string(ThemeDB.fallback_font, deceive_rect.position + Vector2(12, 38), "СХИТРИТЬ", HORIZONTAL_ALIGNMENT_LEFT, 125, 18, Color.WHITE)
 
 func _process(delta: float) -> void:
     if message_time > 0:
@@ -177,6 +187,10 @@ func _input(event: InputEvent) -> void:
                 joystick_touch = event.index
                 joystick_origin = center
                 _update_stick(event.position)
+            elif honest_rect.has_point(event.position) and is_instance_valid(active_customer):
+                _resolve_customer_sale(true)
+            elif deceive_rect.has_point(event.position) and is_instance_valid(active_customer):
+                _resolve_customer_sale(false)
             elif action_button_rect.has_point(event.position):
                 _serve_customer()
         elif event.index == joystick_touch:
@@ -185,7 +199,11 @@ func _input(event: InputEvent) -> void:
     elif event is InputEventScreenDrag and event.index == joystick_touch:
         _update_stick(event.position)
     elif event is InputEventMouseButton and event.pressed:
-        if action_button_rect.has_point(event.position):
+        if honest_rect.has_point(event.position) and is_instance_valid(active_customer):
+            _resolve_customer_sale(true)
+        elif deceive_rect.has_point(event.position) and is_instance_valid(active_customer):
+            _resolve_customer_sale(false)
+        elif action_button_rect.has_point(event.position):
             _serve_customer()
         elif center.distance_to(event.position) < 90:
             joystick_touch = 0
@@ -197,6 +215,10 @@ func _update_stick(pos: Vector2) -> void:
     joystick_vector = ((pos - joystick_origin) / 55.0).limit_length(1.0)
 
 func _serve_customer() -> void:
+    if is_instance_valid(active_customer):
+        message = "Выбери, как поступить с покупателем."
+        message_time = 2.5
+        return
     var closest: Node3D
     var best := 3.0
     for c in customers:
@@ -207,29 +229,37 @@ func _serve_customer() -> void:
             best = d
             closest = c
     if closest:
-        if not closest.get_meta("in_dialogue", false):
-            closest.set_meta("in_dialogue", true)
-            var customer_name: String = closest.customer_name
-            var product_name: String = closest.get_meta("product_name", "смартфон")
-            var budget: int = closest.get_meta("price", 18990)
-            message = "%s: «Ищу %s. Бюджет около %d ₽. Что посоветуете?»" % [customer_name, product_name, budget]
-            message_time = 7.0
-        else:
-            var price := int(closest.get_meta("price", 18990))
-            var result: Dictionary = career.register_sale(price, true)
-            money = career.revenue
-            sales = career.sales_count
-            day = career.day
-            message = "Продажа %d ₽! Комиссия +%d ₽. %s" % [price, result.commission, "Повышение! " + result.rank if result.promoted else "Клиент доволен."]
-            message_time = 5.0
-            career.save_game()
-            closest.queue_free()
-            customers.erase(closest)
-            if customers.size() < 4:
-                _spawn_one_customer()
+        active_customer = closest
+        var customer_name: String = closest.customer_name
+        var product_name: String = closest.get_meta("product_name", "смартфон")
+        var budget: int = closest.get_meta("price", 18990)
+        message = "%s: «Ищу %s. Бюджет около %d ₽». Выбери подход к продаже." % [customer_name, product_name, budget]
+        message_time = 8.0
     else:
         message = "Подойди ближе к покупателю!"
         message_time = 2.5
+
+func _resolve_customer_sale(honest: bool) -> void:
+    if not is_instance_valid(active_customer):
+        active_customer = null
+        return
+    var price := int(active_customer.get_meta("price", 18990))
+    var result: Dictionary = career.register_sale(price, honest)
+    money = career.revenue
+    sales = career.sales_count
+    day = career.day
+    if honest:
+        message = "Честная продажа: %d ₽. Комиссия +%d ₽. %s" % [price, result.commission, "Повышение! " + result.rank if result.promoted else "Репутация растёт."]
+    else:
+        message = "Ты схитрил: %d ₽. Комиссия +%d ₽, но репутация снизилась." % [price, result.commission]
+    message_time = 5.0
+    career.save_game()
+    var sold_customer := active_customer
+    active_customer = null
+    customers.erase(sold_customer)
+    sold_customer.queue_free()
+    if customers.size() < 4:
+        _spawn_one_customer()
 
 func _spawn_one_customer() -> void:
     var c = CUSTOMER_SCRIPT.new()
