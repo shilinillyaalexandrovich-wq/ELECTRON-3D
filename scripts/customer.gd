@@ -1,5 +1,7 @@
 extends Node3D
 
+const CHARACTER_MODEL = preload("res://scripts/character_model.gd")
+
 var customer_name := "Покупатель"
 var patience := 100.0
 var wander_target := Vector3.ZERO
@@ -24,26 +26,10 @@ func _ready() -> void:
     set_meta("price", price)
     set_meta("product_name", product_name)
     set_meta("customer_type", customer_type)
-    var body := MeshInstance3D.new()
-    var capsule := CapsuleMesh.new()
-    capsule.radius = 0.32
-    capsule.height = 1.45
-    body.mesh = capsule
-    body.position.y = 0.75
-    var material := StandardMaterial3D.new()
-    material.albedo_color = [Color(0.88,0.42,0.25), Color(0.32,0.72,0.42), Color(0.65,0.48,0.82), Color(0.9,0.68,0.22)].pick_random()
-    body.material_override = material
-    add_child(body)
-
-    var head := MeshInstance3D.new()
-    var sphere := SphereMesh.new()
-    sphere.radius = 0.23
-    head.mesh = sphere
-    head.position.y = 1.58
-    var skin := StandardMaterial3D.new()
-    skin.albedo_color = Color(0.9, 0.7, 0.55)
-    head.material_override = skin
-    add_child(head)
+    var outfits := [Color(0.72, 0.22, 0.16), Color(0.18, 0.42, 0.28), Color(0.28, 0.25, 0.58), Color(0.78, 0.48, 0.12), Color(0.18, 0.42, 0.58)]
+    var skins := [Color(0.94, 0.73, 0.58), Color(0.72, 0.48, 0.34), Color(0.52, 0.33, 0.23), Color(0.84, 0.62, 0.47)]
+    var hairs := [Color(0.08, 0.055, 0.035), Color(0.28, 0.14, 0.07), Color(0.58, 0.38, 0.18), Color(0.12, 0.12, 0.14)]
+    CHARACTER_MODEL.add_human(self, outfits.pick_random(), skins.pick_random(), hairs.pick_random())
 
     var collision := CollisionShape3D.new()
     var shape := CapsuleShape3D.new()
