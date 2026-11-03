@@ -1,6 +1,7 @@
 extends Node3D
 
 const CUSTOMER_SCRIPT = preload("res://scripts/customer.gd")
+const CHARACTER_MODEL = preload("res://scripts/character_model.gd")
 const CAREER_SCRIPT = preload("res://scripts/career_manager.gd")
 
 var career
@@ -87,23 +88,7 @@ func _build_player() -> void:
     player.position = Vector3(0, 0.05, 4.5)
     add_child(player)
 
-    var body := MeshInstance3D.new()
-    var capsule := CapsuleMesh.new()
-    capsule.radius = 0.38
-    capsule.height = 1.65
-    body.mesh = capsule
-    body.position.y = 0.85
-    body.material_override = _mat(Color(0.05, 0.55, 0.9))
-    player.add_child(body)
-
-    var head := MeshInstance3D.new()
-    var sphere := SphereMesh.new()
-    sphere.radius = 0.28
-    sphere.height = 0.56
-    head.mesh = sphere
-    head.position.y = 1.82
-    head.material_override = _mat(Color(0.92, 0.72, 0.56))
-    player.add_child(head)
+    CHARACTER_MODEL.add_human(player, Color(0.035, 0.38, 0.72), Color(0.88, 0.66, 0.5), Color(0.16, 0.09, 0.045))
 
     var collision := CollisionShape3D.new()
     var shape := CapsuleShape3D.new()
