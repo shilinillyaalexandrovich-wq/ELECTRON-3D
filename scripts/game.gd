@@ -8,6 +8,9 @@ var career
 var player: CharacterBody3D
 var camera: Camera3D
 var customers: Array[Node3D] = []
+var competitor_nodes: Array[Node3D] = []
+var competitor_targets: Array[Node3D] = []
+var competitor_service_time: Array[float] = []
 var money := 0
 var sales := 0
 var day := 1
@@ -40,6 +43,7 @@ func _ready() -> void:
     _build_store()
     _build_player()
     _spawn_customers()
+    _spawn_competitors()
     _build_ui()
 
 func _build_store() -> void:
@@ -207,6 +211,80 @@ func _spawn_customers() -> void:
         add_child(customer)
         customers.append(customer)
 
+func _spawn_competitors() -> void:
+    var outfits := [Color(0.72,0.16,0.12),Color(0.18,0.28,0.62)]
+    for i in range(2):
+        var seller := Node3D.new()
+        seller.name = "RivalSeller_%d" % i
+        seller.position = Vector3(-5.5 + float(i)*11.0,0.0,-5.8)
+        add_child(seller)
+        CHARACTER_MODEL.add_human(seller,outfits[i],Color(0.78,0.57,0.43),Color(0.12,0.08,0.05))
+        var tag := Label3D.new()
+        tag.text = "ПРОДАВЕЦ"
+        tag.font_size = 15
+        tag.pixel_size = 0.01
+        tag.modulate = Color(1.0,0.82,0.35)
+        tag.position = Vector3(0,2.25,0)
+        tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+        seller.add_child(tag)
+        competitor_nodes.append(seller)
+        competitor_targets.append(null)
+        competitor_service_time.append(0.0)
+
+func _update_competitors(delta: float) -> void:
+    for i in range(competitor_nodes.size()):
+        var seller := competitor_nodes[i]
+        if not is_instance_valid(seller):
+            continue
+        var target: Node3D = competitor_targets[i]
+        if not is_instance_valid(target) or bool(target.get("is_being_served")):
+            target = null
+            var nearest := 1000.0
+            for customer in customers:
+                if not is_instance_valid(customer) or bool(customer.get("is_being_served")):
+                    continue
+                var distance := seller.global_position.distance_to(customer.global_position)
+                if distance < nearest:
+                    nearest = distance
+                    target = customer
+            competitor_targets[i] = target
+            competitor_service_time[i] = 0.0
+        if not is_instance_valid(target):
+            continue
+        var direction := target.global_position - seller.global_position
+        direction.y = 0.0
+        var distance_to_customer := direction.length()
+        if distance_to_customer > 1.15:
+            seller.global_position += direction.normalized() * delta * 2.15
+            seller.rotation.y = atan2(-direction.x,-direction.z)
+            competitor_service_time[i] = 0.0
+        else:
+            competitor_service_time[i] += delta
+            if competitor_service_time[i] >= 2.8:
+                _rival_wins_customer(i,target)
+
+func _rival_wins_customer(index: int, customer: Node3D) -> void:
+    if not is_instance_valid(customer):
+        competitor_targets[index] = null
+        competitor_service_time[index] = 0.0
+        return
+    var amount := int(customer.get_meta("price",18990))
+    var rival_commission := int(round(amount*0.025))
+    # Соперник забирает клиента: его продажа влияет на общий результат магазина,
+    # но личную комиссию игрок не получает.
+    career.revenue += amount
+    career.sales_count += 1
+    career.save_game()
+    money = career.revenue
+    sales = career.sales_count
+    message = "Конкурент перехватил клиента! Продажа магазина: %d ₽ (твоя комиссия — 0 ₽)." % amount
+    message_time = 4.5
+    customers.erase(customer)
+    customer.queue_free()
+    competitor_targets[index] = null
+    competitor_service_time[index] = 0.0
+    _spawn_one_customer()
+
 func _build_ui() -> void:
     var layer := CanvasLayer.new()
     add_child(layer)
@@ -255,6 +333,7 @@ func _process(delta: float) -> void:
         message_time -= delta
         if message_time <= 0:
             message = "Найди покупателя и помоги ему с выбором."
+    _update_competitors(delta)
     if is_instance_valid(active_customer) and active_customer.consume_patience(delta):
         _end_dialogue_without_sale()
         message = "Покупатель не дождался консультации и ушёл. Следи за его терпением!"
