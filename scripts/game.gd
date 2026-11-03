@@ -143,7 +143,7 @@ func _build_store_details() -> void:
 
     # Стеллажи с коробками и подсвеченными полками вдоль стен.
     for side in [-1.0, 1.0]:
-        var sx := side * 9.7
+        var sx: float = float(side) * 9.7
         for shelf in range(3):
             var sz := -3.8 + float(shelf) * 3.2
             _box(Vector3(sx, 1.15, sz), Vector3(0.55, 2.25, 2.35), Color(0.055, 0.075, 0.095))
