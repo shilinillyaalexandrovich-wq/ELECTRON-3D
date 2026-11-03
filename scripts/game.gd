@@ -113,11 +113,11 @@ func _build_player() -> void:
     player.add_child(collision)
 
     camera = Camera3D.new()
-    camera.position = Vector3(0, 5.2, 8.5)
-    camera.rotation_degrees = Vector3(-27, 0, 0)
+    camera.top_level = true
     camera_yaw = 0.0
     camera.current = true
-    player.add_child(camera)
+    add_child(camera)
+    _update_camera_transform()
 
 func _spawn_customers() -> void:
     var names := ["Алексей", "Марина", "Игорь", "Ольга", "Денис", "Екатерина"]
@@ -191,10 +191,17 @@ func _physics_process(_delta: float) -> void:
         player.velocity.x = move_toward(player.velocity.x, 0.0, 20.0 * get_physics_process_delta_time())
         player.velocity.z = move_toward(player.velocity.z, 0.0, 20.0 * get_physics_process_delta_time())
     player.velocity.y = 0
-    camera.rotation.y = camera_yaw - player.rotation.y
     player.move_and_slide()
     player.position.x = clamp(player.position.x, -10.5, 10.5)
     player.position.z = clamp(player.position.z, -7.5, 7.5)
+    _update_camera_transform()
+
+func _update_camera_transform() -> void:
+    if not is_instance_valid(camera) or not is_instance_valid(player):
+        return
+    var camera_offset := Vector3(0, 5.2, 8.5).rotated(Vector3.UP, camera_yaw)
+    camera.global_position = player.global_position + camera_offset
+    camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
 
 func _input(event: InputEvent) -> void:
     var size := get_viewport().get_visible_rect().size
