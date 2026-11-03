@@ -57,6 +57,7 @@ func _build_store() -> void:
     # Крыша убрана: камера сверху должна видеть персонажа и покупателей.
     _box(Vector3(0, 3.5, -8.78), Vector3(8, 0.65, 0.12), Color(0.05, 0.65, 0.85))
     _box(Vector3(0, 3.5, -8.68), Vector3(7.4, 0.4, 0.08), Color(0.03, 0.12, 0.17))
+    _build_store_details()
 
     for i in range(4):
         var x := -7.0 + float(i) * 4.6
@@ -81,6 +82,103 @@ func _build_store() -> void:
         omni.light_energy = 0.8
         omni.omni_range = 8
         add_child(omni)
+
+
+func _build_store_details() -> void:
+    # Светлый торговый зал с контрастными проходами и фирменными панелями.
+    _box(Vector3(0, 0.005, 0), Vector3(23.4, 0.025, 17.4), Color(0.32, 0.36, 0.4))
+    for x in [-10.0, -5.0, 0.0, 5.0, 10.0]:
+        _box(Vector3(x, 0.012, 0), Vector3(0.035, 0.012, 16.8), Color(0.42, 0.48, 0.53))
+    _box(Vector3(0, 0.03, 6.9), Vector3(10.0, 0.025, 1.1), Color(0.08, 0.35, 0.48))
+
+    # Витринные окна по краям входа, центральный проход остаётся открытым.
+    var glass := StandardMaterial3D.new()
+    glass.albedo_color = Color(0.24, 0.68, 0.82, 0.22)
+    glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    glass.roughness = 0.18
+    glass.metallic = 0.25
+    for side in [-1.0, 1.0]:
+        var frame := _box_node(Vector3(side * 9.0, 1.65, 8.82), Vector3(4.8, 3.2, 0.08), Color(0.08, 0.13, 0.17))
+        var pane := MeshInstance3D.new()
+        var pane_mesh := BoxMesh.new()
+        pane_mesh.size = Vector3(4.55, 2.85, 0.035)
+        pane.mesh = pane_mesh
+        pane.position = Vector3(side * 9.0, 1.65, 8.76)
+        pane.material_override = glass
+        add_child(pane)
+    for x in [-11.35, -6.65, 6.65, 11.35]:
+        _box(Vector3(x, 1.7, 8.7), Vector3(0.12, 3.4, 0.18), Color(0.04, 0.58, 0.76))
+    _box(Vector3(0, 3.45, 8.68), Vector3(7.0, 0.32, 0.28), Color(0.04, 0.58, 0.76))
+    _add_store_label("ELECTRON", Vector3(0, 3.48, 8.48), 42, Color(0.12, 0.86, 1.0))
+
+    # Фирменная панель и телевизионная стена.
+    _box(Vector3(0, 3.0, -8.72), Vector3(8.2, 1.25, 0.12), Color(0.025, 0.07, 0.11))
+    _add_store_label("ТЕХНИКА. КОТОРАЯ ДВИЖЕТ.", Vector3(0, 3.05, -8.62), 22, Color(0.78, 0.92, 1.0))
+    for i in range(4):
+        var tx := -7.2 + float(i) * 4.8
+        _box(Vector3(tx, 1.75, -8.35), Vector3(2.35, 1.38, 0.16), Color(0.025, 0.03, 0.04))
+        _box(Vector3(tx, 1.75, -8.25), Vector3(2.17, 1.2, 0.035), [Color(0.04, 0.24, 0.38), Color(0.08, 0.34, 0.28), Color(0.2, 0.16, 0.38), Color(0.12, 0.28, 0.42)][i])
+        _box(Vector3(tx, 0.92, -8.25), Vector3(0.16, 0.32, 0.12), Color(0.12, 0.14, 0.17))
+
+    # Центральные острова с демонстрационными смартфонами и ноутбуками.
+    for island in range(3):
+        var ix := -6.0 + float(island) * 6.0
+        _box(Vector3(ix, 0.78, 0.0), Vector3(3.5, 1.25, 1.7), Color(0.12, 0.16, 0.21))
+        _box(Vector3(ix, 1.43, 0.0), Vector3(3.35, 0.12, 1.58), Color(0.12, 0.62, 0.78))
+        for p in range(4):
+            var px := ix - 1.15 + float(p) * 0.76
+            if island == 1:
+                _box(Vector3(px, 1.57, -0.12), Vector3(0.48, 0.035, 0.34), Color(0.035, 0.04, 0.05))
+                _box(Vector3(px, 1.76, 0.02), Vector3(0.48, 0.36, 0.035), Color(0.08, 0.22, 0.32))
+            else:
+                _box(Vector3(px, 1.62, -0.05), Vector3(0.25, 0.42, 0.035), Color(0.025, 0.035, 0.045))
+                _box(Vector3(px, 1.62, -0.025), Vector3(0.21, 0.37, 0.012), [Color(0.05, 0.35, 0.52), Color(0.12, 0.48, 0.38), Color(0.35, 0.2, 0.48), Color(0.3, 0.36, 0.42)][p])
+
+    # Стеллажи с коробками и подсвеченными полками вдоль стен.
+    for side in [-1.0, 1.0]:
+        var sx := side * 9.7
+        for shelf in range(3):
+            var sz := -3.8 + float(shelf) * 3.2
+            _box(Vector3(sx, 1.15, sz), Vector3(0.55, 2.25, 2.35), Color(0.055, 0.075, 0.095))
+            for level in range(3):
+                _box(Vector3(sx - side * 0.31, 0.55 + float(level) * 0.72, sz), Vector3(0.08, 0.045, 2.2), Color(0.12, 0.62, 0.78))
+                for item in range(3):
+                    var iz := sz - 0.72 + float(item) * 0.72
+                    _box(Vector3(sx - side * 0.38, 0.78 + float(level) * 0.72, iz), Vector3(0.28, 0.38, 0.38), [Color(0.2, 0.48, 0.68), Color(0.68, 0.3, 0.18), Color(0.24, 0.58, 0.38)][item])
+
+    # Кассовая и сервисная стойки возле входа.
+    _box(Vector3(-5.8, 0.72, 5.0), Vector3(3.4, 1.25, 1.15), Color(0.045, 0.09, 0.13))
+    _box(Vector3(-5.8, 1.38, 5.0), Vector3(3.5, 0.12, 1.22), Color(0.06, 0.58, 0.76))
+    _box(Vector3(-5.8, 1.65, 4.62), Vector3(0.62, 0.38, 0.06), Color(0.025, 0.035, 0.045))
+    _box(Vector3(5.8, 0.72, 5.0), Vector3(3.4, 1.25, 1.15), Color(0.045, 0.09, 0.13))
+    _box(Vector3(5.8, 1.38, 5.0), Vector3(3.5, 0.12, 1.22), Color(0.06, 0.58, 0.76))
+    _add_store_label("КАССА", Vector3(-5.8, 1.9, 4.38), 18, Color(0.5, 0.9, 1.0))
+    _add_store_label("СЕРВИС", Vector3(5.8, 1.9, 4.38), 18, Color(0.5, 0.9, 1.0))
+
+    # Потолочные балки и световые короба без сплошной крыши.
+    for x in [-8.0, -4.0, 0.0, 4.0, 8.0]:
+        _box(Vector3(x, 4.0, 0.0), Vector3(0.12, 0.12, 15.5), Color(0.12, 0.18, 0.22))
+        _box(Vector3(x, 3.88, -1.0), Vector3(1.5, 0.08, 0.32), Color(0.7, 0.88, 1.0))
+
+func _box_node(pos: Vector3, dimensions: Vector3, color: Color) -> MeshInstance3D:
+    var node := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = dimensions
+    node.mesh = mesh
+    node.position = pos
+    node.material_override = _mat(color)
+    add_child(node)
+    return node
+
+func _add_store_label(value: String, pos: Vector3, font_size: int, tint: Color) -> void:
+    var label := Label3D.new()
+    label.text = value
+    label.font_size = font_size
+    label.pixel_size = 0.008
+    label.modulate = tint
+    label.position = pos
+    label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    add_child(label)
 
 func _build_player() -> void:
     player = CharacterBody3D.new()
