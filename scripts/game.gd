@@ -321,9 +321,14 @@ func _build_ui() -> void:
 
 func _draw_hud(hud: Control) -> void:
     var size := hud.get_viewport_rect().size
-    hud.draw_rect(Rect2(18, 18, 360, 92), Color(0.025, 0.04, 0.06, 0.88), true)
+    hud.draw_rect(Rect2(18, 18, 410, 154), Color(0.025, 0.04, 0.06, 0.90), true)
     hud.draw_string(ThemeDB.fallback_font, Vector2(36, 52), "ELECTRON  |  ДЕНЬ %d  |  %s" % [day, career.current_rank()], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.2, 0.85, 1))
-    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 88), "Выручка: %d ₽   Продажи: %d   Опыт: %d" % [money, sales, career.experience], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 84), "Выручка: %d ₽   Продажи: %d   Опыт: %d" % [money, sales, career.experience], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 114), "Личные деньги: %d ₽   Репутация: %d/100" % [career.cash, career.reputation], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.78, 0.94, 0.84))
+    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 144), "План дня: %d / %d ₽" % [money, career.daily_target], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.98, 0.82, 0.48))
+    var target_ratio: float = clampf(float(money) / maxf(1.0, float(career.daily_target)), 0.0, 1.0)
+    hud.draw_rect(Rect2(270, 132, 140, 10), Color(0.16, 0.2, 0.23), true)
+    hud.draw_rect(Rect2(270, 132, 140.0 * target_ratio, 10), Color(0.12, 0.78, 0.48), true)
     hud.draw_rect(Rect2(18, size.y - 92, 330, 72), Color(0.025, 0.04, 0.06, 0.82), true)
     hud.draw_string(ThemeDB.fallback_font, Vector2(34, size.y - 63), message, HORIZONTAL_ALIGNMENT_LEFT, 290, 16, Color.WHITE)
     hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 330, 45), "СЛЕВА — ДВИЖЕНИЕ  •  СПРАВА — ОБЗОР", HORIZONTAL_ALIGNMENT_LEFT, 320, 15, Color(0.7, 0.85, 0.9))
