@@ -363,7 +363,7 @@ func _draw_hud(hud: Control) -> void:
             hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(12,42), "Закупка: %d ₽  •  Продажа: %d ₽" % [int(item["cost"]), int(item["price"])], HORIZONTAL_ALIGNMENT_LEFT, 340, 13, Color(0.65,0.88,0.92))
             hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(370,32), "ЗАКАЗАТЬ +3", HORIZONTAL_ALIGNMENT_LEFT, 150, 15, Color(0.2,0.9,1.0))
         hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(22,455), "Нажми на товар, чтобы заказать 3 единицы. Нажми «СКЛАД» для закрытия.", HORIZONTAL_ALIGNMENT_LEFT, 520, 14, Color(0.72,0.82,0.88))
-    var center := Vector2(92, size.y - 130)
+    var center := Vector2(92, size.y - 170)
     hud.draw_circle(center, 62, Color(0.05, 0.08, 0.12, 0.55))
     hud.draw_circle(center + joystick_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.9))
     dialogue_rects.clear()
@@ -439,7 +439,7 @@ func _update_camera_transform() -> void:
 
 func _input(event: InputEvent) -> void:
     var size := get_viewport().get_visible_rect().size
-    var center := Vector2(92, size.y - 130)
+    var center := Vector2(92, size.y - 170)
     action_button_rect = _get_action_button_rect(size)
     if event is InputEventScreenTouch:
         if event.pressed:
