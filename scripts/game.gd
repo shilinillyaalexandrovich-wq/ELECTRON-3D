@@ -687,6 +687,8 @@ func _handle_inventory_tap(position: Vector2) -> void:
 func _close_workday() -> void:
     var result: Dictionary = career.close_day()
     message = "День закрыт! Выручка: %d ₽ / план: %d ₽. Бонус: %d ₽. Зарплата: %d ₽." % [result.revenue,result.target,result.bonus,result.salary_paid]
+    if bool(result.get("promoted", false)):
+        message += "\nНОВОЕ ЗВАНИЕ: " + str(result.get("rank", career.current_rank()))
     message_time = 7.0
     day = career.day
     money = career.revenue
