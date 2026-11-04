@@ -329,6 +329,10 @@ func _draw_hud(hud: Control) -> void:
     var target_ratio: float = clampf(float(money) / maxf(1.0, float(career.daily_target)), 0.0, 1.0)
     hud.draw_rect(Rect2(36, 157, 374, 12), Color(0.16, 0.2, 0.23), true)
     hud.draw_rect(Rect2(36, 157, 374.0 * target_ratio, 12), Color(0.12, 0.78, 0.48), true)
+    var next_rank_index: int = mini(career.rank_index + 1, career.PROMOTION_XP.size() - 1)
+    var next_rank_xp: int = int(career.PROMOTION_XP[next_rank_index])
+    var rank_progress_text := "Максимальный ранг" if career.rank_index >= career.RANKS.size() - 1 else "До повышения: %d XP  •  Жалобы: %d" % [maxi(0, next_rank_xp - career.experience), career.complaints]
+    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 193), rank_progress_text, HORIZONTAL_ALIGNMENT_LEFT, 380, 14, Color(0.72, 0.84, 0.92))
     hud.draw_rect(Rect2(18, size.y - 92, 330, 72), Color(0.025, 0.04, 0.06, 0.82), true)
     hud.draw_string(ThemeDB.fallback_font, Vector2(34, size.y - 63), message, HORIZONTAL_ALIGNMENT_LEFT, 290, 16, Color.WHITE)
     hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 330, 45), "СЛЕВА — ДВИЖЕНИЕ  •  СПРАВА — ОБЗОР", HORIZONTAL_ALIGNMENT_LEFT, 320, 15, Color(0.7, 0.85, 0.9))
