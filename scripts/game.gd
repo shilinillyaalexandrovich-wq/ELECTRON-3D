@@ -603,7 +603,7 @@ func _serve_customer() -> void:
     if is_instance_valid(active_customer):
         return
     var closest: Node3D
-    var best := 3.0
+    var best := 4.2
     for customer in customers:
         if not is_instance_valid(customer):
             continue
@@ -614,6 +614,10 @@ func _serve_customer() -> void:
     if closest:
         active_customer = closest
         active_customer.begin_service()
+        var to_player := player.global_position - active_customer.global_position
+        to_player.y = 0.0
+        if to_player.length() > 0.01:
+            active_customer.rotation.y = atan2(-to_player.x, -to_player.z)
         dialogue_step = 0
         dialogue_quality = 0
         dialogue_approach = 0
