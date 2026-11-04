@@ -61,13 +61,16 @@ func close_day() -> Dictionary:
         bonus = int(daily_target * 0.05)
         cash += bonus
         experience += 50
+    var promoted := _check_promotion()
     cash += salary
     var result := {
         "salary_paid": salary,
         "revenue": revenue,
         "target": daily_target,
         "bonus": bonus,
-        "sales": sales_count
+        "sales": sales_count,
+        "promoted": promoted,
+        "rank": current_rank()
     }
     day += 1
     revenue = 0
