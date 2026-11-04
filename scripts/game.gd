@@ -392,11 +392,11 @@ func _draw_hud(hud: Control) -> void:
             hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(12,42), "Закупка: %d ₽  •  Продажа: %d ₽" % [int(item["cost"]), int(item["price"])], HORIZONTAL_ALIGNMENT_LEFT, 340, 13, Color(0.65,0.88,0.92))
             hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(370,32), "ЗАКАЗАТЬ +3", HORIZONTAL_ALIGNMENT_LEFT, 150, 15, Color(0.2,0.9,1.0))
         hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(22,455), "Нажми на товар, чтобы заказать 3 единицы. Нажми «СКЛАД» для закрытия.", HORIZONTAL_ALIGNMENT_LEFT, 520, 14, Color(0.72,0.82,0.88))
-    var center := _get_joystick_center(size)
+    var center := joystick_origin if joystick_touch != -1 else _get_joystick_center(size)
     var joystick_scale := _get_joystick_scale(size)
-    hud.draw_circle(center, 62.0 * joystick_scale, Color(0.05, 0.08, 0.12, 0.68))
-    hud.draw_circle(center, 62.0 * joystick_scale, Color(0.35, 0.48, 0.58, 0.85), false, 3.0 * joystick_scale)
-    hud.draw_circle(center + joystick_vector * 38.0 * joystick_scale, 25.0 * joystick_scale, Color(0.1, 0.65, 0.9, 0.96))
+    hud.draw_circle(center, 68.0 * joystick_scale, Color(0.05, 0.08, 0.12, 0.72))
+    hud.draw_circle(center, 68.0 * joystick_scale, Color(0.35, 0.58, 0.72, 0.92), false, 3.0 * joystick_scale)
+    hud.draw_circle(center + joystick_vector * 48.0 * joystick_scale, 27.0 * joystick_scale, Color(0.1, 0.65, 0.9, 0.98))
     dialogue_rects.clear()
     if is_instance_valid(active_customer):
         action_button_rect = Rect2()
@@ -445,33 +445,37 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
     if not is_instance_valid(player):
         return
-
-    # Джойстик задаёт направление относительно экрана: вверх всегда вперёд.
-    # Камера следует за игроком, но не вращается вслед за каждым поворотом модели.
+    # Вектор управления строится по базису камеры: вверх на экране — вперёд.
     var input_vector := joystick_vector
-    if input_vector.length() > 0.08:
-        var direction := Vector3(input_vector.x, 0.0, input_vector.y)
-        direction = direction.normalized()
-        var target_speed := 4.0
-        player.velocity.x = move_toward(player.velocity.x, direction.x * target_speed, 18.0 * delta)
-        player.velocity.z = move_toward(player.velocity.z, direction.z * target_speed, 18.0 * delta)
-        player.rotation.y = lerp_angle(player.rotation.y, atan2(-direction.x, -direction.z), minf(1.0, delta * 12.0))
+    if input_vector.length() > 0.10:
+        var camera_right := camera.global_transform.basis.x
+        var camera_forward := -camera.global_transform.basis.z
+        camera_right.y = 0.0
+        camera_forward.y = 0.0
+        camera_right = camera_right.normalized()
+        camera_forward = camera_forward.normalized()
+        var direction := (camera_right * input_vector.x + camera_forward * -input_vector.y).normalized()
+        var target_speed := 4.2
+        player.velocity.x = move_toward(player.velocity.x, direction.x * target_speed, 24.0 * delta)
+        player.velocity.z = move_toward(player.velocity.z, direction.z * target_speed, 24.0 * delta)
+        player.rotation.y = lerp_angle(player.rotation.y, atan2(-direction.x, -direction.z), 1.0 - exp(-14.0 * delta))
     else:
-        player.velocity.x = move_toward(player.velocity.x, 0.0, 22.0 * delta)
-        player.velocity.z = move_toward(player.velocity.z, 0.0, 22.0 * delta)
-
+        player.velocity.x = move_toward(player.velocity.x, 0.0, 28.0 * delta)
+        player.velocity.z = move_toward(player.velocity.z, 0.0, 28.0 * delta)
     player.velocity.y = 0.0
     player.move_and_slide()
-    player.global_position.x = clampf(player.global_position.x, -10.5, 10.5)
-    player.global_position.z = clampf(player.global_position.z, -7.5, 7.5)
-    _update_camera_transform()
+    if player.global_position.x < -10.4 or player.global_position.x > 10.4:
+        player.velocity.x = 0.0
+    if player.global_position.z < -7.4 or player.global_position.z > 7.4:
+        player.velocity.z = 0.0
+    _update_camera_transform(delta)
 
-func _update_camera_transform() -> void:
+func _update_camera_transform(delta: float = 0.016) -> void:
     if not is_instance_valid(camera) or not is_instance_valid(player):
         return
-    # Камера плавно сопровождает персонажа с постоянным направлением обзора.
-    var target_position := player.global_position + Vector3(0.0, 3.8, 6.4)
-    camera.global_position = camera.global_position.lerp(target_position, 0.16)
+    var target_position := player.global_position + Vector3(0.0, 3.5, 6.0)
+    var follow_weight := 1.0 - exp(-8.0 * delta)
+    camera.global_position = camera.global_position.lerp(target_position, follow_weight)
     camera.look_at(player.global_position + Vector3(0.0, 0.95, 0.0), Vector3.UP)
 
 func _input(event: InputEvent) -> void:
@@ -499,7 +503,7 @@ func _input(event: InputEvent) -> void:
                 return
             if joystick_touch == -1 and _is_joystick_touch_zone(event.position, size):
                 joystick_touch = event.index
-                joystick_origin = center
+                joystick_origin = event.position
                 _update_stick(event.position)
         else:
             if event.index == joystick_touch:
@@ -541,7 +545,7 @@ func _input(event: InputEvent) -> void:
                 return
             if joystick_touch == -1 and _is_joystick_touch_zone(event.position, size):
                 joystick_touch = 0
-                joystick_origin = center
+                joystick_origin = event.position
                 _update_stick(event.position)
         elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
             if joystick_touch == 0:
@@ -580,19 +584,20 @@ func _dialogue_option_at(position: Vector2) -> bool:
     return false
 
 func _get_joystick_center(size: Vector2) -> Vector2:
-    return Vector2(size.x * 0.13, size.y * 0.89)
+    return Vector2(size.x * 0.14, size.y * 0.86)
 
 func _get_joystick_scale(size: Vector2) -> float:
     return minf(size.x / 720.0, size.y / 1280.0)
 
 func _is_joystick_touch_zone(pos: Vector2, size: Vector2) -> bool:
-    # Большая удобная зона захвата в нижней левой части экрана.
-    return pos.x < size.x * 0.43 and pos.y > size.y * 0.58 and pos.distance_to(_get_joystick_center(size)) < 104.0 * _get_joystick_scale(size)
+    # Плавающий джойстик: можно начать движение в любой точке нижней левой зоны.
+    return pos.x < size.x * 0.56 and pos.y > size.y * 0.48 and pos.y < size.y - 70.0
 
 func _update_stick(pos: Vector2) -> void:
     var scale_factor := _get_joystick_scale(get_viewport().get_visible_rect().size)
-    var travel := 43.0 * scale_factor
-    joystick_vector = ((pos - joystick_origin) / maxf(1.0, travel)).limit_length(1.0)
+    var travel := 58.0 * scale_factor
+    var offset := pos - joystick_origin
+    joystick_vector = Vector2.ZERO if offset.length() < 8.0 * scale_factor else (offset / maxf(1.0, travel)).limit_length(1.0)
 
 func _serve_customer() -> void:
     if is_instance_valid(active_customer):
