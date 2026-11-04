@@ -359,7 +359,7 @@ func _draw_hud(hud: Control) -> void:
             inventory_row_rects.append(row)
             hud.draw_rect(row, Color(0.05,0.1,0.15,0.98), true)
             hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(12,22), "%s  %s  |  Остаток: %d" % [item["brand"],item["name"],inventory.stock.get(product_id,0)], HORIZONTAL_ALIGNMENT_LEFT, 320, 16, Color.WHITE)
-            hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(12,42), "Закупка: %d ₽ / шт." % int(item["cost"]), HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Color(0.65,0.78,0.84))
+            hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(12,42), "Закупка: %d ₽  •  Продажа: %d ₽" % [int(item["cost"]), int(item["price"])], HORIZONTAL_ALIGNMENT_LEFT, 340, 13, Color(0.65,0.88,0.92))
             hud.draw_string(ThemeDB.fallback_font, row.position + Vector2(370,32), "ЗАКАЗАТЬ +3", HORIZONTAL_ALIGNMENT_LEFT, 150, 15, Color(0.2,0.9,1.0))
         hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(22,455), "Нажми на товар, чтобы заказать 3 единицы. Нажми «СКЛАД» для закрытия.", HORIZONTAL_ALIGNMENT_LEFT, 520, 14, Color(0.72,0.82,0.88))
     var center := Vector2(92, size.y - 130)
