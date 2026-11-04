@@ -251,6 +251,8 @@ func _update_competitors(delta: float) -> void:
             for customer in customers:
                 if not is_instance_valid(customer) or bool(customer.get("is_being_served")):
                     continue
+                if _customer_claimed_by_other_seller(customer, i):
+                    continue
                 var distance := seller.global_position.distance_to(customer.global_position)
                 if distance < nearest:
                     nearest = distance
@@ -270,6 +272,14 @@ func _update_competitors(delta: float) -> void:
             competitor_service_time[i] += delta
             if competitor_service_time[i] >= 2.8:
                 _rival_wins_customer(i,target)
+
+func _customer_claimed_by_other_seller(customer: Node3D, seller_index: int) -> bool:
+    for other_index in range(competitor_targets.size()):
+        if other_index == seller_index:
+            continue
+        if competitor_targets[other_index] == customer:
+            return true
+    return false
 
 func _rival_wins_customer(index: int, customer: Node3D) -> void:
     if not is_instance_valid(customer):
