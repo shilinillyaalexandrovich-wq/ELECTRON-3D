@@ -128,19 +128,45 @@ func _build_store_details() -> void:
         _box(Vector3(tx, 1.75, -8.25), Vector3(2.17, 1.2, 0.035), [Color(0.04, 0.24, 0.38), Color(0.08, 0.34, 0.28), Color(0.2, 0.16, 0.38), Color(0.12, 0.28, 0.42)][i])
         _box(Vector3(tx, 0.92, -8.25), Vector3(0.16, 0.32, 0.12), Color(0.12, 0.14, 0.17))
 
-    # Центральные острова с демонстрационными смартфонами и ноутбуками.
+    # Три открытых демонстрационных острова с узнаваемыми моделями техники.
     for island in range(3):
         var ix := -6.0 + float(island) * 6.0
-        _box(Vector3(ix, 0.78, 0.0), Vector3(3.5, 1.25, 1.7), Color(0.12, 0.16, 0.21))
-        _box(Vector3(ix, 1.43, 0.0), Vector3(3.35, 0.12, 1.58), Color(0.12, 0.62, 0.78))
-        for p in range(4):
-            var px := ix - 1.15 + float(p) * 0.76
-            if island == 1:
-                _box(Vector3(px, 1.57, -0.12), Vector3(0.48, 0.035, 0.34), Color(0.035, 0.04, 0.05))
-                _box(Vector3(px, 1.76, 0.02), Vector3(0.48, 0.36, 0.035), Color(0.08, 0.22, 0.32))
+        _box(Vector3(ix, 0.72, -0.1), Vector3(3.25, 1.12, 1.45), Color(0.075, 0.105, 0.14))
+        _box(Vector3(ix, 1.32, -0.1), Vector3(3.18, 0.10, 1.38), Color(0.08, 0.58, 0.76))
+        for p in range(3):
+            var px := ix - 0.92 + float(p) * 0.92
+            if island == 0:
+                # Смартфон: корпус, стеклянный экран и камера.
+                _box_node(Vector3(px, 1.48, -0.16), Vector3(0.34, 0.035, 0.62), Color(0.025,0.035,0.05))
+                _box_node(Vector3(px, 1.501, -0.16), Vector3(0.29, 0.012, 0.53), [Color(0.05,0.36,0.58),Color(0.12,0.48,0.38),Color(0.35,0.2,0.48)][p])
+                _box_node(Vector3(px, 1.51, 0.115), Vector3(0.06,0.008,0.025), Color(0.01,0.015,0.02))
+            elif island == 1:
+                # Ноутбук: клавиатурная база и поднятый экран.
+                _box_node(Vector3(px, 1.47, -0.12), Vector3(0.72,0.045,0.48), Color(0.16,0.19,0.23))
+                _box_node(Vector3(px, 1.70, -0.34), Vector3(0.70,0.42,0.045), Color(0.025,0.035,0.05))
+                _box_node(Vector3(px, 1.70, -0.312), Vector3(0.63,0.35,0.012), [Color(0.06,0.3,0.5),Color(0.1,0.42,0.36),Color(0.3,0.2,0.42)][p])
             else:
-                _box(Vector3(px, 1.62, -0.05), Vector3(0.25, 0.42, 0.035), Color(0.025, 0.035, 0.045))
-                _box(Vector3(px, 1.62, -0.025), Vector3(0.21, 0.37, 0.012), [Color(0.05, 0.35, 0.52), Color(0.12, 0.48, 0.38), Color(0.35, 0.2, 0.48), Color(0.3, 0.36, 0.42)][p])
+                # Наушники на компактной демонстрационной подставке.
+                _box_node(Vector3(px, 1.49, -0.14), Vector3(0.24,0.16,0.22), Color(0.19,0.22,0.26))
+                var band := MeshInstance3D.new()
+                var torus := TorusMesh.new()
+                torus.inner_radius = 0.12
+                torus.outer_radius = 0.17
+                band.mesh = torus
+                band.position = Vector3(px,1.77,-0.14)
+                band.rotation_degrees.x = 90
+                band.material_override = _mat([Color(0.08,0.1,0.13),Color(0.12,0.42,0.58),Color(0.32,0.22,0.4)][p])
+                add_child(band)
+                for side in [-1.0,1.0]:
+                    var cup := MeshInstance3D.new()
+                    var cup_mesh := CylinderMesh.new()
+                    cup_mesh.top_radius = 0.09
+                    cup_mesh.bottom_radius = 0.09
+                    cup_mesh.height = 0.12
+                    cup.mesh = cup_mesh
+                    cup.position = Vector3(px + side*0.14,1.64,-0.14)
+                    cup.material_override = _mat(Color(0.07,0.09,0.12))
+                    add_child(cup)
 
     # Стеллажи с коробками и подсвеченными полками вдоль стен.
     for side in [-1.0, 1.0]:
@@ -163,10 +189,9 @@ func _build_store_details() -> void:
     _add_store_label("КАССА", Vector3(-5.8, 1.9, 4.38), 18, Color(0.5, 0.9, 1.0))
     _add_store_label("СЕРВИС", Vector3(5.8, 1.9, 4.38), 18, Color(0.5, 0.9, 1.0))
 
-    # Потолочные балки и световые короба без сплошной крыши.
-    for x in [-8.0, -4.0, 0.0, 4.0, 8.0]:
-        _box(Vector3(x, 4.0, 0.0), Vector3(0.12, 0.12, 15.5), Color(0.12, 0.18, 0.22))
-        _box(Vector3(x, 3.88, -1.0), Vector3(1.5, 0.08, 0.32), Color(0.7, 0.88, 1.0))
+    # Верхнее пространство оставляем полностью открытым: камера не должна
+    # упираться в потолочные балки и перекрывать обзор торгового зала.
+    _box(Vector3(0, 3.72, -1.0), Vector3(7.5, 0.08, 0.24), Color(0.7, 0.88, 1.0))
 
 func _box_node(pos: Vector3, dimensions: Vector3, color: Color) -> MeshInstance3D:
     var node := MeshInstance3D.new()
@@ -213,10 +238,14 @@ func _build_player() -> void:
 
 func _spawn_customers() -> void:
     var names := ["Алексей", "Марина", "Игорь", "Ольга", "Денис", "Екатерина"]
+    var spawn_points := [
+        Vector3(-8.0,0.0,-1.8), Vector3(-3.0,0.0,-3.4),
+        Vector3(3.2,0.0,-3.2), Vector3(8.0,0.0,-1.4)
+    ]
     for i in range(4):
         var customer = CUSTOMER_SCRIPT.new()
         customer.customer_name = names[i]
-        customer.position = Vector3(-7.0 + i * 4.5, 0.0, -1.0 - (i % 2) * 2.0)
+        customer.position = spawn_points[i]
         add_child(customer)
         customers.append(customer)
 
@@ -441,9 +470,9 @@ func _update_camera_transform() -> void:
     if not is_instance_valid(camera) or not is_instance_valid(player):
         return
     # Камера плавно сопровождает персонажа с постоянным направлением обзора.
-    var target_position := player.global_position + Vector3(0.0, 4.6, 7.2)
-    camera.global_position = camera.global_position.lerp(target_position, 0.22)
-    camera.look_at(player.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
+    var target_position := player.global_position + Vector3(0.0, 3.8, 6.4)
+    camera.global_position = camera.global_position.lerp(target_position, 0.16)
+    camera.look_at(player.global_position + Vector3(0.0, 0.95, 0.0), Vector3.UP)
 
 func _input(event: InputEvent) -> void:
     var size := get_viewport().get_visible_rect().size
@@ -721,7 +750,7 @@ func _resolve_customer_sale(honest: bool) -> void:
 func _spawn_one_customer() -> void:
     var c = CUSTOMER_SCRIPT.new()
     c.customer_name = ["Павел", "Светлана", "Роман", "Анна"].pick_random()
-    c.position = Vector3(randf_range(-7, 7), 0, randf_range(-2, 1))
+    c.position = Vector3([-8.0,-3.0,3.0,8.0].pick_random(), 0, randf_range(-3.8,-1.2))
     add_child(c)
     customers.append(c)
 
@@ -733,6 +762,18 @@ func _box(pos: Vector3, dimensions: Vector3, color: Color) -> void:
     node.position = pos
     node.material_override = _mat(color)
     add_child(node)
+
+    # Крупная мебель получает физические коллайдеры, чтобы персонаж
+    # не проходил сквозь стойки, острова и стеллажи.
+    if dimensions.x > 0.5 and dimensions.y > 0.5 and dimensions.z > 0.5:
+        var body := StaticBody3D.new()
+        body.position = pos
+        var collision := CollisionShape3D.new()
+        var shape := BoxShape3D.new()
+        shape.size = dimensions
+        collision.shape = shape
+        body.add_child(collision)
+        add_child(body)
 
 func _mat(color: Color) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
