@@ -52,7 +52,7 @@ func sell(product_name: String, sale_price: int) -> bool:
     if product_id == "" or not CATALOG.has(product_id):
         return false
     var amount := int(stock.get(product_id, 0))
-    if amount <= 0:
+    if amount <= 0 or sale_price <= 0:
         return false
     stock[product_id] = amount - 1
     var cost := int(CATALOG[product_id]["cost"])
@@ -90,7 +90,7 @@ func load_inventory() -> void:
         return
     var saved_stock = parsed.get("stock", {})
     for product_id in CATALOG.keys():
-        stock[product_id] = int(saved_stock.get(product_id, 4))
+        stock[product_id] = maxi(0, int(saved_stock.get(product_id, 4)))
     store_funds = int(parsed.get("store_funds", 250000))
     total_cost = int(parsed.get("total_cost", 0))
     total_profit = int(parsed.get("total_profit", 0))
