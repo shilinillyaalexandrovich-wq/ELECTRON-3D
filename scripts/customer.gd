@@ -49,7 +49,7 @@ func _ready() -> void:
     var outfits := [Color(0.72,0.22,0.16),Color(0.18,0.42,0.28),Color(0.28,0.25,0.58),Color(0.78,0.48,0.12),Color(0.18,0.42,0.58)]
     var skins := [Color(0.94,0.73,0.58),Color(0.72,0.48,0.34),Color(0.52,0.33,0.23),Color(0.84,0.62,0.47)]
     var hairs := [Color(0.08,0.055,0.035),Color(0.28,0.14,0.07),Color(0.58,0.38,0.18),Color(0.12,0.12,0.14)]
-    CHARACTER_MODEL.add_human(self,outfits.pick_random(),skins.pick_random(),hairs.pick_random())
+    CHARACTER_MODEL.add_human(self,outfits.pick_random(),skins.pick_random(),hairs.pick_random(), "customer")
 
     var collision := CollisionShape3D.new()
     var shape := CapsuleShape3D.new()
