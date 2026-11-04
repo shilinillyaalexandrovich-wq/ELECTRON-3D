@@ -26,6 +26,14 @@ const RANKS := [
 const PROMOTION_XP := [0, 250, 800, 1800, 4000, 9000]
 
 func register_sale(amount: int, honest: bool = true) -> Dictionary:
+    # Reject invalid transactions before changing career progress or player finances.
+    if amount <= 0:
+        return {
+            "amount": 0,
+            "commission": 0,
+            "promoted": false,
+            "rank": current_rank()
+        }
     var commission := int(round(amount * 0.025))
     revenue += amount
     sales_count += 1
