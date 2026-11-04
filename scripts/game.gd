@@ -379,7 +379,8 @@ func _draw_hud(hud: Control) -> void:
         for i in range(mini(lines.size(), 2)):
             hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(18, 58 + i * 25), lines[i], HORIZONTAL_ALIGNMENT_LEFT, int(panel.size.x - 30), 18, Color.WHITE)
         var patience_ratio: float = active_customer.patience_percent()
-        var patience_label := "Терпение покупателя: %d%%" % int(round(patience_ratio * 100.0))
+        var contact_score := clampi(dialogue_quality, 0, 6)
+        var patience_label := "Терпение: %d%%   •   Контакт: %d/6" % [int(round(patience_ratio * 100.0)), contact_score]
         hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(18, 103), patience_label, HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Color(0.78,0.88,0.94))
         var patience_bar := Rect2(panel.position + Vector2(270, 92), Vector2(maxf(80.0, panel.size.x - 290.0), 9))
         hud.draw_rect(patience_bar, Color(0.12,0.16,0.2), true)
