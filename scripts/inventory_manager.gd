@@ -34,16 +34,23 @@ func product_id_for(product_name: String) -> String:
         return "телевизор"
     if normalized.contains("планшет"):
         return "планшет"
-    return "техника"
+    if normalized.contains("техника") or normalized.contains("бытов"):
+        return "техника"
+    return ""
 
 func quantity(product_name: String) -> int:
-    return int(stock.get(product_id_for(product_name), 0))
+    var product_id := product_id_for(product_name)
+    if product_id == "":
+        return 0
+    return int(stock.get(product_id, 0))
 
 func can_sell(product_name: String) -> bool:
     return quantity(product_name) > 0
 
 func sell(product_name: String, sale_price: int) -> bool:
     var product_id := product_id_for(product_name)
+    if product_id == "" or not CATALOG.has(product_id):
+        return false
     var amount := int(stock.get(product_id, 0))
     if amount <= 0:
         return false
