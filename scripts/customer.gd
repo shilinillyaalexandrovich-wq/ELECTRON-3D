@@ -79,7 +79,14 @@ func _process(delta: float) -> void:
 
 func _choose_browse_target() -> void:
     wander_timer = randf_range(3.0,6.0)
-    var stops := [Vector3(-6.0,0.0,0.0),Vector3(0.0,0.0,0.0),Vector3(6.0,0.0,0.0),Vector3(-9.0,0.0,-3.5),Vector3(9.0,0.0,-3.5),Vector3(randf_range(-7.0,7.0),0.0,randf_range(-4.0,2.0))]
+    # Маршруты проходят по свободным проходам между островами,
+    # а не сквозь витрины и демонстрационные столы.
+    var stops := [
+        Vector3(-8.0,0.0,2.8), Vector3(-3.8,0.0,2.8),
+        Vector3(3.8,0.0,2.8), Vector3(8.0,0.0,2.8),
+        Vector3(-8.0,0.0,-3.8), Vector3(-3.8,0.0,-3.8),
+        Vector3(3.8,0.0,-3.8), Vector3(8.0,0.0,-3.8)
+    ]
     wander_target = stops.pick_random()
 
 func begin_service() -> void:
