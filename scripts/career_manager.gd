@@ -106,14 +106,14 @@ func load_game() -> bool:
     var parsed = JSON.parse_string(file.get_as_text())
     if typeof(parsed) != TYPE_DICTIONARY:
         return false
-    day = int(parsed.get("day", 1))
-    cash = int(parsed.get("cash", 0))
-    revenue = int(parsed.get("revenue", 0))
-    sales_count = int(parsed.get("sales_count", 0))
-    experience = int(parsed.get("experience", 0))
-    reputation = int(parsed.get("reputation", 50))
-    complaints = int(parsed.get("complaints", 0))
-    daily_target = int(parsed.get("daily_target", 50000))
-    salary = int(parsed.get("salary", 1800))
+    day = maxi(1, int(parsed.get("day", 1)))
+    cash = maxi(0, int(parsed.get("cash", 0)))
+    revenue = maxi(0, int(parsed.get("revenue", 0)))
+    sales_count = maxi(0, int(parsed.get("sales_count", 0)))
+    experience = maxi(0, int(parsed.get("experience", 0)))
+    reputation = clampi(int(parsed.get("reputation", 50)), 0, 100)
+    complaints = maxi(0, int(parsed.get("complaints", 0)))
+    daily_target = maxi(1, int(parsed.get("daily_target", 50000)))
+    salary = maxi(0, int(parsed.get("salary", 1800)))
     rank_index = clampi(int(parsed.get("rank_index", 0)), 0, RANKS.size() - 1)
     return true
