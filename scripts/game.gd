@@ -638,17 +638,20 @@ func _resolve_customer_sale(honest: bool) -> void:
         message = "%s: «Спасибо, я ещё подумаю». Сделка не состоялась." % customer_name
         message_time = 5.0
     else:
-        inventory.sell(product_name, price)
-        var result: Dictionary = career.register_sale(price,honest)
-        money = career.revenue
-        sales = career.sales_count
-        day = career.day
-        if honest:
-            message = "Продажа: %d ₽. Комиссия +%d ₽. %s" % [price,result.commission,"Повышение! "+result.rank if result.promoted else "Репутация растёт."]
+        if not inventory.sell(product_name, price):
+            message = "Покупатель уже не смог купить товар: остаток закончился."
+            message_time = 4.0
         else:
-            message = "Продажа с обманом: %d ₽. Комиссия +%d ₽, репутация снизилась." % [price,result.commission]
-        message_time = 5.0
-        career.save_game()
+            var result: Dictionary = career.register_sale(price,honest)
+            money = career.revenue
+            sales = career.sales_count
+            day = career.day
+            if honest:
+                message = "Продажа: %d ₽. Комиссия +%d ₽. %s" % [price,result.commission,"Повышение! "+result.rank if result.promoted else "Репутация растёт."]
+            else:
+                message = "Продажа с обманом: %d ₽. Комиссия +%d ₽, репутация снизилась." % [price,result.commission]
+            message_time = 5.0
+            career.save_game()
     var finished_customer := active_customer
     active_customer = null
     dialogue_step = -1
