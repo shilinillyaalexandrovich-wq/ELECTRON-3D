@@ -25,11 +25,12 @@ var message_time := 5.0
 var joystick_touch := -1
 var joystick_origin := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
-var camera_touch := -1
 var camera_yaw := 0.0
-var camera_vector := Vector2.ZERO
-var camera_sensitivity := 0.006
 var action_button_rect := Rect2()
+var action_button_center := Vector2.ZERO
+var action_touch := -1
+var action_dragging := false
+var action_press_position := Vector2.ZERO
 var active_customer: Node3D
 var dialogue_step := -1
 var dialogue_text := ""
@@ -321,26 +322,26 @@ func _build_ui() -> void:
 
 func _draw_hud(hud: Control) -> void:
     var size := hud.get_viewport_rect().size
-    hud.draw_rect(Rect2(18, 18, 410, 154), Color(0.025, 0.04, 0.06, 0.90), true)
-    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 52), "ELECTRON  |  ДЕНЬ %d  |  %s" % [day, career.current_rank()], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.2, 0.85, 1))
-    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 84), "Выручка: %d ₽   Продажи: %d   Опыт: %d" % [money, sales, career.experience], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
-    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 114), "Личные деньги: %d ₽   Репутация: %d/100" % [career.cash, career.reputation], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.78, 0.94, 0.84))
-    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 144), "План дня: %d / %d ₽" % [money, career.daily_target], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.98, 0.82, 0.48))
+    hud.draw_rect(Rect2(18, 18, size.x - 36, 190), Color(0.025, 0.04, 0.06, 0.90), true)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(32, 49), "ELECTRON  |  ДЕНЬ %d" % day, HORIZONTAL_ALIGNMENT_LEFT, size.x - 220, 23, Color(0.2, 0.85, 1))
+    hud.draw_string(ThemeDB.fallback_font, Vector2(32, 80), career.current_rank(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 220, 17, Color.WHITE)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(32, 111), "Выручка: %d ₽   Продажи: %d" % [money, sales], HORIZONTAL_ALIGNMENT_LEFT, size.x - 220, 16, Color.WHITE)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(32, 140), "Личные деньги: %d ₽" % career.cash, HORIZONTAL_ALIGNMENT_LEFT, size.x - 220, 15, Color(0.78, 0.94, 0.84))
+    hud.draw_string(ThemeDB.fallback_font, Vector2(32, 168), "План: %d / %d ₽   Опыт: %d" % [money, career.daily_target, career.experience], HORIZONTAL_ALIGNMENT_LEFT, size.x - 220, 14, Color(0.98, 0.82, 0.48))
     var target_ratio: float = clampf(float(money) / maxf(1.0, float(career.daily_target)), 0.0, 1.0)
-    hud.draw_rect(Rect2(36, 157, 374, 12), Color(0.16, 0.2, 0.23), true)
-    hud.draw_rect(Rect2(36, 157, 374.0 * target_ratio, 12), Color(0.12, 0.78, 0.48), true)
+    hud.draw_rect(Rect2(32, 178, size.x - 64, 9), Color(0.16, 0.2, 0.23), true)
+    hud.draw_rect(Rect2(32, 178, (size.x - 64) * target_ratio, 9), Color(0.12, 0.78, 0.48), true)
     var next_rank_index: int = mini(career.rank_index + 1, career.PROMOTION_XP.size() - 1)
     var next_rank_xp: int = int(career.PROMOTION_XP[next_rank_index])
     var rank_progress_text := "Максимальный ранг" if career.rank_index >= career.RANKS.size() - 1 else "До повышения: %d XP  •  Жалобы: %d" % [maxi(0, next_rank_xp - career.experience), career.complaints]
-    hud.draw_string(ThemeDB.fallback_font, Vector2(36, 193), rank_progress_text, HORIZONTAL_ALIGNMENT_LEFT, 380, 14, Color(0.72, 0.84, 0.92))
-    hud.draw_rect(Rect2(18, size.y - 92, 330, 72), Color(0.025, 0.04, 0.06, 0.82), true)
-    hud.draw_string(ThemeDB.fallback_font, Vector2(34, size.y - 63), message, HORIZONTAL_ALIGNMENT_LEFT, 290, 16, Color.WHITE)
-    hud.draw_string(ThemeDB.fallback_font, Vector2(size.x - 330, 45), "СЛЕВА — ДВИЖЕНИЕ  •  СПРАВА — ОБЗОР", HORIZONTAL_ALIGNMENT_LEFT, 320, 15, Color(0.7, 0.85, 0.9))
-    inventory_toggle_rect = Rect2(size.x - 176, 64, 150, 48)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(32, 204), rank_progress_text, HORIZONTAL_ALIGNMENT_LEFT, size.x - 64, 13, Color(0.72, 0.84, 0.92))
+    hud.draw_rect(Rect2(18, size.y - 92, size.x - 36, 72), Color(0.025, 0.04, 0.06, 0.82), true)
+    hud.draw_string(ThemeDB.fallback_font, Vector2(30, size.y - 62), message, HORIZONTAL_ALIGNMENT_LEFT, size.x - 60, 15, Color.WHITE)
+    inventory_toggle_rect = Rect2(size.x - 170, 24, 140, 46)
     hud.draw_rect(inventory_toggle_rect, Color(0.04,0.32,0.42,0.95), true)
     hud.draw_rect(inventory_toggle_rect, Color(0.2,0.82,1.0), false, 2.0)
     hud.draw_string(ThemeDB.fallback_font, inventory_toggle_rect.position + Vector2(20,31), "СКЛАД / ЗАКАЗЫ", HORIZONTAL_ALIGNMENT_LEFT, 140, 16, Color.WHITE)
-    close_day_rect = Rect2(size.x - 176, 120, 150, 42)
+    close_day_rect = Rect2(size.x - 170, 78, 140, 42)
     hud.draw_rect(close_day_rect, Color(0.28,0.22,0.06,0.95), true)
     hud.draw_rect(close_day_rect, Color(0.95,0.72,0.22), false, 2.0)
     hud.draw_string(ThemeDB.fallback_font, close_day_rect.position + Vector2(17,27), "ЗАКРЫТЬ ДЕНЬ", HORIZONTAL_ALIGNMENT_LEFT, 140, 15, Color.WHITE)
@@ -365,13 +366,10 @@ func _draw_hud(hud: Control) -> void:
     var center := Vector2(92, size.y - 130)
     hud.draw_circle(center, 62, Color(0.05, 0.08, 0.12, 0.55))
     hud.draw_circle(center + joystick_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.9))
-    var right_center := Vector2(size.x - 92, size.y - 130)
-    hud.draw_circle(right_center, 62, Color(0.05, 0.08, 0.12, 0.55))
-    hud.draw_circle(right_center + camera_vector * 36, 25, Color(0.1, 0.65, 0.9, 0.9))
     dialogue_rects.clear()
     if is_instance_valid(active_customer):
         action_button_rect = Rect2()
-        var panel := Rect2(350, size.y - 405, size.x - 380, 112)
+        var panel := Rect2(18, size.y - 520, size.x - 36, 155)
         hud.draw_rect(panel, Color(0.025, 0.04, 0.06, 0.94), true)
         hud.draw_string(ThemeDB.fallback_font, panel.position + Vector2(18, 30), "ДИАЛОГ С ПОКУПАТЕЛЕМ", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.2, 0.85, 1))
         var lines := dialogue_text.split("\
@@ -387,7 +385,7 @@ func _draw_hud(hud: Control) -> void:
         var patience_fill := Rect2(patience_bar.position, Vector2(patience_bar.size.x * patience_ratio, patience_bar.size.y))
         hud.draw_rect(patience_fill, Color(1.0 - patience_ratio, 0.35 + patience_ratio * 0.55, 0.18), true)
         for i in range(dialogue_options.size()):
-            var rect := Rect2(size.x - 370, size.y - 280 + i * 62, 340, 52)
+            var rect := Rect2(18, size.y - 345 + i * 62, size.x - 36, 52)
             dialogue_rects.append(rect)
             hud.draw_rect(rect, Color(0.06, 0.28, 0.38, 0.96), true)
             hud.draw_rect(rect, Color(0.18, 0.72, 0.88, 0.9), false, 2.0)
@@ -395,6 +393,7 @@ func _draw_hud(hud: Control) -> void:
     else:
         action_button_rect = _get_action_button_rect(size)
         hud.draw_circle(action_button_rect.get_center(), 48, Color(0.05, 0.62, 0.82, 0.92))
+        hud.draw_circle(action_button_rect.get_center(), 54, Color(0.35, 0.88, 1.0, 0.75), false, 3.0)
         hud.draw_string(ThemeDB.fallback_font, Vector2(action_button_rect.position.x - 4, action_button_rect.position.y + 58), "ОБЩАТЬСЯ", HORIZONTAL_ALIGNMENT_CENTER, 126, 17, Color.WHITE)
 
 func _process(delta: float) -> void:
@@ -433,79 +432,118 @@ func _physics_process(_delta: float) -> void:
 func _update_camera_transform() -> void:
     if not is_instance_valid(camera) or not is_instance_valid(player):
         return
-    var camera_offset := Vector3(0, 5.2, 8.5).rotated(Vector3.UP, camera_yaw)
+    # Камера всегда следует за спиной персонажа; ручное вращение убрано.
+    var camera_offset := Vector3(0, 5.2, 8.5).rotated(Vector3.UP, player.rotation.y)
     camera.global_position = player.global_position + camera_offset
     camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
 
 func _input(event: InputEvent) -> void:
     var size := get_viewport().get_visible_rect().size
     var center := Vector2(92, size.y - 130)
-    var right_center := Vector2(size.x - 92, size.y - 130)
     action_button_rect = _get_action_button_rect(size)
     if event is InputEventScreenTouch:
         if event.pressed:
             if inventory_toggle_rect.has_point(event.position):
                 inventory_panel_open = not inventory_panel_open
-            elif close_day_rect.has_point(event.position) and not inventory_panel_open and not is_instance_valid(active_customer):
+                return
+            if close_day_rect.has_point(event.position) and not inventory_panel_open and not is_instance_valid(active_customer):
                 _close_workday()
-            elif inventory_panel_open:
+                return
+            if inventory_panel_open:
                 _handle_inventory_tap(event.position)
-            elif is_instance_valid(active_customer):
+                return
+            if is_instance_valid(active_customer) and _dialogue_option_at(event.position):
                 _handle_dialogue_tap(event.position)
-            elif center.distance_to(event.position) < 90:
+                return
+            if not is_instance_valid(active_customer) and action_button_rect.has_point(event.position):
+                action_touch = event.index
+                action_press_position = event.position
+                action_dragging = false
+                return
+            if joystick_touch == -1 and center.distance_to(event.position) < 92:
                 joystick_touch = event.index
                 joystick_origin = center
                 _update_stick(event.position)
-            elif right_center.distance_to(event.position) < 90:
-                camera_touch = event.index
-                _update_camera_stick(event.position, right_center)
-            elif action_button_rect.has_point(event.position):
-                _serve_customer()
-            elif event.position.x > size.x * 0.42 and event.position.y < size.y - 185:
-                camera_touch = event.index
         else:
             if event.index == joystick_touch:
                 joystick_touch = -1
                 joystick_vector = Vector2.ZERO
-            if event.index == camera_touch:
-                camera_touch = -1
-                camera_vector = Vector2.ZERO
+            if event.index == action_touch:
+                if not action_dragging and action_press_position.distance_to(event.position) < 18.0:
+                    _serve_customer()
+                action_touch = -1
+                action_dragging = false
     elif event is InputEventScreenDrag:
         if event.index == joystick_touch:
             _update_stick(event.position)
-        elif event.index == camera_touch:
-            _update_camera_stick(event.position, right_center)
-            _rotate_camera(event.relative.x)
+        elif event.index == action_touch:
+            if action_press_position.distance_to(event.position) > 14.0:
+                action_dragging = true
+            if action_dragging:
+                action_button_center = event.position
+                _clamp_action_button_center(size)
+                action_button_rect = _get_action_button_rect(size)
     elif event is InputEventMouseButton:
-        if event.pressed:
-            if is_instance_valid(active_customer):
+        if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+            if inventory_toggle_rect.has_point(event.position):
+                inventory_panel_open = not inventory_panel_open
+                return
+            if close_day_rect.has_point(event.position) and not inventory_panel_open and not is_instance_valid(active_customer):
+                _close_workday()
+                return
+            if inventory_panel_open:
+                _handle_inventory_tap(event.position)
+                return
+            if is_instance_valid(active_customer) and _dialogue_option_at(event.position):
                 _handle_dialogue_tap(event.position)
-            elif center.distance_to(event.position) < 90:
+                return
+            if not is_instance_valid(active_customer) and action_button_rect.has_point(event.position):
+                action_touch = 0
+                action_press_position = event.position
+                action_dragging = false
+                return
+            if joystick_touch == -1 and center.distance_to(event.position) < 92:
                 joystick_touch = 0
                 joystick_origin = center
                 _update_stick(event.position)
-            elif right_center.distance_to(event.position) < 90:
-                camera_touch = 0
-                _update_camera_stick(event.position, right_center)
-            elif action_button_rect.has_point(event.position):
-                _serve_customer()
-            elif event.position.x > size.x * 0.42 and event.position.y < size.y - 185:
-                camera_touch = 0
+        elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+            if joystick_touch == 0:
+                joystick_touch = -1
+                joystick_vector = Vector2.ZERO
+            if action_touch == 0:
+                if not action_dragging and action_press_position.distance_to(event.position) < 18.0:
+                    _serve_customer()
+                action_touch = -1
+                action_dragging = false
     elif event is InputEventMouseMotion:
         if joystick_touch == 0 and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
             _update_stick(event.position)
-        elif camera_touch == 0 and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-            _update_camera_stick(event.position, right_center)
-            _rotate_camera(event.relative.x)
+        elif action_touch == 0 and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+            if action_press_position.distance_to(event.position) > 14.0:
+                action_dragging = true
+            if action_dragging:
+                action_button_center = event.position
+                _clamp_action_button_center(size)
+                action_button_rect = _get_action_button_rect(size)
 
 func _get_action_button_rect(size: Vector2) -> Rect2:
-    return Rect2(size.x - 166, size.y - 340, 132, 96)
+    if action_button_center == Vector2.ZERO:
+        action_button_center = Vector2(size.x - 100.0, size.y * 0.62)
+    _clamp_action_button_center(size)
+    return Rect2(action_button_center - Vector2(66, 48), Vector2(132, 96))
+
+func _clamp_action_button_center(size: Vector2) -> void:
+    action_button_center.x = clampf(action_button_center.x, 72.0, size.x - 72.0)
+    action_button_center.y = clampf(action_button_center.y, 250.0, size.y - 90.0)
+
+func _dialogue_option_at(position: Vector2) -> bool:
+    for rect in dialogue_rects:
+        if rect.has_point(position):
+            return true
+    return false
 
 func _update_stick(pos: Vector2) -> void:
     joystick_vector = ((pos - joystick_origin) / 55.0).limit_length(1.0)
-
-func _update_camera_stick(pos: Vector2, origin: Vector2) -> void:
-    camera_vector = ((pos - origin) / 55.0).limit_length(1.0)
 
 func _serve_customer() -> void:
     if is_instance_valid(active_customer):
@@ -682,9 +720,9 @@ func _mat(color: Color) -> StandardMaterial3D:
     material.roughness = 0.82
     return material
 
-func _rotate_camera(horizontal_delta: float) -> void:
-    camera_yaw -= horizontal_delta * camera_sensitivity
-    camera_yaw = wrapf(camera_yaw, -TAU, TAU)
+func _rotate_camera(_horizontal_delta: float) -> void:
+    # Оставлено для совместимости со старыми вызовами; камера теперь фиксирована за игроком.
+    pass
 
 func _handle_inventory_tap(position: Vector2) -> void:
     for i in range(inventory_row_rects.size()):
