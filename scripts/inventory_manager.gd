@@ -62,8 +62,8 @@ func sell(product_name: String, sale_price: int) -> bool:
     return true
 
 func order_stock(product_id: String, quantity_to_buy: int) -> Dictionary:
-    if not CATALOG.has(product_id) or quantity_to_buy <= 0:
-        return {"ok":false,"message":"Некорректный заказ."}
+    if not CATALOG.has(product_id) or quantity_to_buy <= 0 or quantity_to_buy > 99:
+        return {"ok":false,"message":"Некорректный заказ. За один раз можно заказать от 1 до 99 единиц."}
     var cost := int(CATALOG[product_id]["cost"]) * quantity_to_buy
     if store_funds < cost:
         return {"ok":false,"message":"Недостаточно средств магазина. Нужно %d ₽." % cost}
@@ -91,6 +91,6 @@ func load_inventory() -> void:
     var saved_stock = parsed.get("stock", {})
     for product_id in CATALOG.keys():
         stock[product_id] = maxi(0, int(saved_stock.get(product_id, 4)))
-    store_funds = int(parsed.get("store_funds", 250000))
-    total_cost = int(parsed.get("total_cost", 0))
+    store_funds = maxi(0, int(parsed.get("store_funds", 250000)))
+    total_cost = maxi(0, int(parsed.get("total_cost", 0)))
     total_profit = int(parsed.get("total_profit", 0))
