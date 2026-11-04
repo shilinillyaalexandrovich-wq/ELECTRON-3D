@@ -236,7 +236,7 @@ func _build_player() -> void:
     player.position = Vector3(0, 0.05, 4.5)
     add_child(player)
 
-    CHARACTER_MODEL.add_human(player, Color(0.035, 0.38, 0.72), Color(0.88, 0.66, 0.5), Color(0.16, 0.09, 0.045))
+    CHARACTER_MODEL.add_human(player, Color(0.035, 0.38, 0.72), Color(0.88, 0.66, 0.5), Color(0.16, 0.09, 0.045), "player")
 
     var collision := CollisionShape3D.new()
     var shape := CapsuleShape3D.new()
@@ -273,7 +273,7 @@ func _spawn_competitors() -> void:
         seller.name = "RivalSeller_%d" % i
         seller.position = Vector3(-5.5 + float(i)*11.0,0.0,-5.8)
         add_child(seller)
-        CHARACTER_MODEL.add_human(seller,outfits[i],Color(0.78,0.57,0.43),Color(0.12,0.08,0.05))
+        CHARACTER_MODEL.add_human(seller,outfits[i],Color(0.78,0.57,0.43),Color(0.12,0.08,0.05), "seller")
         var tag := Label3D.new()
         tag.text = "ПРОДАВЕЦ"
         tag.font_size = 15
@@ -442,7 +442,7 @@ func _draw_hud(hud: Control) -> void:
         action_button_rect = _get_action_button_rect(size)
         hud.draw_circle(action_button_rect.get_center(), 48, Color(0.05, 0.62, 0.82, 0.92))
         hud.draw_circle(action_button_rect.get_center(), 54, Color(0.35, 0.88, 1.0, 0.75), false, 3.0)
-        hud.draw_string(ThemeDB.fallback_font, Vector2(action_button_rect.position.x - 4, action_button_rect.position.y + 58), "ОБЩАТЬСЯ", HORIZONTAL_ALIGNMENT_CENTER, 126, 17, Color.WHITE)
+        hud.draw_string(ThemeDB.fallback_font, Vector2(action_button_rect.position.x - 4, action_button_rect.position.y + 58), "ПОГОВОРИТЬ", HORIZONTAL_ALIGNMENT_CENTER, 180, 19, Color.WHITE)
 
 func _process(delta: float) -> void:
     if message_time > 0:
@@ -586,13 +586,13 @@ func _input(event: InputEvent) -> void:
 
 func _get_action_button_rect(size: Vector2) -> Rect2:
     if action_button_center == Vector2.ZERO:
-        action_button_center = Vector2(size.x - 100.0, size.y * 0.62)
+        action_button_center = Vector2(size.x - 118.0, size.y * 0.68)
     _clamp_action_button_center(size)
-    return Rect2(action_button_center - Vector2(66, 48), Vector2(132, 96))
+    return Rect2(action_button_center - Vector2(92, 60), Vector2(184, 120))
 
 func _clamp_action_button_center(size: Vector2) -> void:
-    action_button_center.x = clampf(action_button_center.x, 72.0, size.x - 72.0)
-    action_button_center.y = clampf(action_button_center.y, 250.0, size.y - 90.0)
+    action_button_center.x = clampf(action_button_center.x, 98.0, size.x - 98.0)
+    action_button_center.y = clampf(action_button_center.y, 300.0, size.y - 125.0)
 
 func _dialogue_option_at(position: Vector2) -> bool:
     for rect in dialogue_rects:
@@ -617,18 +617,20 @@ func _update_stick(pos: Vector2) -> void:
     joystick_vector = Vector2.ZERO if offset.length() < 8.0 * scale_factor else (offset / maxf(1.0, travel)).limit_length(1.0)
 
 func _serve_customer() -> void:
-    if is_instance_valid(active_customer):
+    if is_instance_valid(active_customer) or not is_instance_valid(player):
         return
     var closest: Node3D
-    var best := 4.2
+    var best := 8.0
     for customer in customers:
-        if not is_instance_valid(customer):
+        if not is_instance_valid(customer) or bool(customer.get("is_being_served")):
             continue
-        var distance := player.global_position.distance_to(customer.global_position)
+        var offset := player.global_position - customer.global_position
+        offset.y = 0.0
+        var distance := offset.length()
         if distance < best:
             best = distance
             closest = customer
-    if closest:
+    if is_instance_valid(closest):
         active_customer = closest
         active_customer.begin_service()
         var to_player := player.global_position - active_customer.global_position
@@ -639,9 +641,11 @@ func _serve_customer() -> void:
         dialogue_quality = 0
         dialogue_approach = 0
         _set_dialogue_step()
+        message = "Ты начал консультацию с %s." % active_customer.customer_name
+        message_time = 2.0
     else:
-        message = "Подойди ближе к покупателю!"
-        message_time = 2.5
+        message = "Покупатель далеко. Подойди к ближайшему и нажми ПОГОВОРИТЬ."
+        message_time = 3.0
 
 func _set_dialogue_step() -> void:
     if not is_instance_valid(active_customer):
