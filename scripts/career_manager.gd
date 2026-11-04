@@ -48,12 +48,13 @@ func current_rank() -> String:
     return RANKS[rank_index]
 
 func _check_promotion() -> bool:
-    if rank_index < RANKS.size() - 1 and experience >= PROMOTION_XP[rank_index + 1]:
+    var promoted := false
+    while rank_index < RANKS.size() - 1 and experience >= PROMOTION_XP[rank_index + 1]:
         rank_index += 1
         salary += 600
         reputation = mini(100, reputation + 5)
-        return true
-    return false
+        promoted = true
+    return promoted
 
 func close_day() -> Dictionary:
     var bonus := 0
