@@ -79,22 +79,35 @@ func _build_store() -> void:
         for j in range(3):
             _box(Vector3(x - 0.9 + j * 0.9, 2.05, -5.3), Vector3(0.55, 0.8, 0.42), [Color(0.22,0.65,0.9), Color(0.85,0.35,0.18), Color(0.3,0.75,0.45)][j])
 
+    # Мягкий общий свет убирает почти чёрные тени на персонажах и мебели.
+    var world := WorldEnvironment.new()
+    var environment := Environment.new()
+    environment.background_mode = Environment.BG_COLOR
+    environment.background_color = Color(0.36, 0.43, 0.52)
+    environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+    environment.ambient_light_color = Color(0.72, 0.82, 0.96)
+    environment.ambient_light_energy = 0.82
+    environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+    world.environment = environment
+    add_child(world)
+
     var light := DirectionalLight3D.new()
     light.rotation_degrees = Vector3(-55, -25, 0)
-    light.light_energy = 1.25
+    light.light_energy = 1.45
+    light.shadow_enabled = true
     add_child(light)
 
     for x in [-7.0, -2.5, 2.5, 7.0]:
         var omni := OmniLight3D.new()
         omni.position = Vector3(x, 3.7, 0)
-        omni.light_energy = 0.8
-        omni.omni_range = 8
+        omni.light_energy = 1.0
+        omni.omni_range = 9
         add_child(omni)
 
 
 func _build_store_details() -> void:
     # Светлый торговый зал с контрастными проходами и фирменными панелями.
-    _box(Vector3(0, 0.005, 0), Vector3(23.4, 0.025, 17.4), Color(0.32, 0.36, 0.4))
+    _box(Vector3(0, 0.005, 0), Vector3(23.4, 0.025, 17.4), Color(0.48, 0.52, 0.57))
     for x in [-10.0, -5.0, 0.0, 5.0, 10.0]:
         _box(Vector3(x, 0.012, 0), Vector3(0.035, 0.012, 16.8), Color(0.42, 0.48, 0.53))
     _box(Vector3(0, 0.03, 6.9), Vector3(10.0, 0.025, 1.1), Color(0.08, 0.35, 0.48))
@@ -167,6 +180,10 @@ func _build_store_details() -> void:
                     cup.position = Vector3(px + side*0.14,1.64,-0.14)
                     cup.material_override = _mat(Color(0.07,0.09,0.12))
                     add_child(cup)
+
+    _add_store_label("СМАРТФОНЫ", Vector3(-6.0, 1.92, 0.82), 17, Color(0.86,0.96,1.0))
+    _add_store_label("НОУТБУКИ", Vector3(0.0, 1.92, 0.82), 17, Color(0.86,0.96,1.0))
+    _add_store_label("НАУШНИКИ", Vector3(6.0, 1.92, 0.82), 17, Color(0.86,0.96,1.0))
 
     # Стеллажи с коробками и подсвеченными полками вдоль стен.
     for side in [-1.0, 1.0]:
