@@ -37,7 +37,8 @@ static func add_human(root: Node3D, shirt_color: Color, skin_color: Color, hair_
     var shirt := _mat(shirt_color)
     var skin := _mat(skin_color)
     var hair := _mat(hair_color)
-    var pants_color := [Color(0.055,0.075,0.105), Color(0.16,0.18,0.22), Color(0.10,0.13,0.17)].pick_random()
+    var pants_options: Array[Color] = [Color(0.055,0.075,0.105), Color(0.16,0.18,0.22), Color(0.10,0.13,0.17)]
+    var pants_color: Color = pants_options[randi() % pants_options.size()]
     var pants := _mat(pants_color)
     var shoe_mat := _mat(Color(0.035,0.045,0.06))
     var white := _mat(Color(0.96,0.97,0.94))
