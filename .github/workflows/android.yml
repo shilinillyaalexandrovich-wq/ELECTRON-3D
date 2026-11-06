@@ -87,6 +87,16 @@ jobs:
             echo "Godot reported a script startup error."
             exit 1
           fi
+          DUMMY_MESH_ERRORS="$(grep -Fc 'ERROR: Parameter "m" is null.' godot-smoke.log || true)"
+          UNEXPECTED_ERRORS="$(grep '^ERROR:' godot-smoke.log | grep -Fv 'ERROR: Parameter "m" is null.' || true)"
+          if [[ -n "$UNEXPECTED_ERRORS" ]]; then
+            printf '%s\n' "$UNEXPECTED_ERRORS"
+            echo "Godot reported an unexpected runtime error."
+            exit 1
+          fi
+          if [[ "$DUMMY_MESH_ERRORS" -gt 0 ]]; then
+            echo "::notice::Godot 4.3 headless dummy renderer emitted $DUMMY_MESH_ERRORS mesh-storage diagnostics; script errors and all other engine errors are still treated as failures."
+          fi
 
       - name: Export Android APK
         shell: bash
@@ -96,6 +106,22 @@ jobs:
           export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
           export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           godot --headless --verbose --path . --export-debug "Android" ELECTRON-debug.apk 2>&1 | tee godot-export.log
+
+      - name: Verify Android APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="ELECTRON-debug.apk"
+          AAPT="$ANDROID_HOME/build-tools/34.0.0/aapt"
+          APKSIGNER="$ANDROID_HOME/build-tools/34.0.0/apksigner"
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          "$APKSIGNER" verify --verbose "$APK"
+          BADGING="$("$AAPT" dump badging "$APK")"
+          grep -Fq "package: name='com.electron.career'" <<< "$BADGING"
+          grep -Fq "launchable-activity:" <<< "$BADGING"
+          unzip -Z1 "$APK" | grep -Fxq "lib/arm64-v8a/libgodot_android.so"
+          echo "Verified installable ELECTRON Android APK: $(stat -c%s "$APK") bytes (arm64-v8a)."
 
       - name: Upload export diagnostics
         if: always()
