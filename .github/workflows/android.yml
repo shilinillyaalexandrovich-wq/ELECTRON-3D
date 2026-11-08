@@ -87,7 +87,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot --path . --rendering-method gl_compatibility --rendering-driver opengl3 --quit-after 5 --verbose 2>&1 | tee godot-smoke.log
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot --path . --rendering-method gl_compatibility --rendering-driver opengl3 --audio-driver Dummy --quit-after 5 --verbose 2>&1 | tee godot-smoke.log
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" godot-smoke.log; then
             echo "Godot reported a script startup error."
             exit 1
