@@ -78,24 +78,29 @@ jobs:
       - name: Import project
         run: godot --headless --editor --path . --quit --verbose
 
-      - name: Headless game startup smoke test
+      - name: Install software-rendered display for scene smoke test
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0
+
+      - name: Godot scene startup smoke test (Mesa/OpenGL)
         shell: bash
         run: |
           set -o pipefail
-          godot --headless --path . --quit-after 5 --verbose 2>&1 | tee godot-smoke.log
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot --path . --rendering-method gl_compatibility --rendering-driver opengl3 --quit-after 5 --verbose 2>&1 | tee godot-smoke.log
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" godot-smoke.log; then
             echo "Godot reported a script startup error."
             exit 1
           fi
-          DUMMY_MESH_ERRORS="$(grep -Fc 'ERROR: Parameter "m" is null.' godot-smoke.log || true)"
-          UNEXPECTED_ERRORS="$(grep '^ERROR:' godot-smoke.log | grep -Fv 'ERROR: Parameter "m" is null.' || true)"
-          if [[ -n "$UNEXPECTED_ERRORS" ]]; then
-            printf '%s\n' "$UNEXPECTED_ERRORS"
-            echo "Godot reported an unexpected runtime error."
+          ENGINE_ERRORS="$(grep '^ERROR:' godot-smoke.log || true)"
+          if [[ -n "$ENGINE_ERRORS" ]]; then
+            printf '%s\n' "$ENGINE_ERRORS"
+            echo "Godot reported an engine error while running the store scene with Mesa/OpenGL."
             exit 1
           fi
-          if [[ "$DUMMY_MESH_ERRORS" -gt 0 ]]; then
-            echo "::notice::Godot 4.3 headless dummy renderer emitted $DUMMY_MESH_ERRORS mesh-storage diagnostics; script errors and all other engine errors are still treated as failures."
+          if ! grep -Eqi "OpenGL API|OpenGL ES" godot-smoke.log; then
+            echo "The scene smoke test did not confirm an OpenGL renderer."
+            exit 1
           fi
 
       - name: Export Android APK
