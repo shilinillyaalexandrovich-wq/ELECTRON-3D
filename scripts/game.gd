@@ -516,9 +516,7 @@ func _input(event: InputEvent) -> void:
                 _handle_dialogue_tap(event.position)
                 return
             if not is_instance_valid(active_customer) and action_button_rect.has_point(event.position):
-                action_touch = event.index
-                action_press_position = event.position
-                action_dragging = false
+                _serve_customer()
                 return
             if joystick_touch == -1 and _is_joystick_touch_zone(event.position, size):
                 joystick_touch = event.index
@@ -558,9 +556,7 @@ func _input(event: InputEvent) -> void:
                 _handle_dialogue_tap(event.position)
                 return
             if not is_instance_valid(active_customer) and action_button_rect.has_point(event.position):
-                action_touch = 0
-                action_press_position = event.position
-                action_dragging = false
+                _serve_customer()
                 return
             if joystick_touch == -1 and _is_joystick_touch_zone(event.position, size):
                 joystick_touch = 0
@@ -622,7 +618,7 @@ func _serve_customer() -> void:
     if is_instance_valid(active_customer) or not is_instance_valid(player):
         return
     var closest: Node3D
-    var best := 8.0
+    var best := 10.0
     for customer in customers:
         if not is_instance_valid(customer) or bool(customer.get("is_being_served")):
             continue
@@ -646,7 +642,7 @@ func _serve_customer() -> void:
         message = "Ты начал консультацию с %s." % active_customer.customer_name
         message_time = 2.0
     else:
-        message = "Покупатель далеко. Подойди к ближайшему и нажми ПОГОВОРИТЬ."
+        message = "Рядом нет покупателя. Подойди ближе к человеку и нажми ПОГОВОРИТЬ."
         message_time = 3.0
 
 func _set_dialogue_step() -> void:
