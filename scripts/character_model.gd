@@ -228,3 +228,30 @@ static func _add_outfit_details(root: Node3D, role: String, shirt: Material, acc
         if randi_range(0, 5) == 0:
             var strap := _mesh(root, BoxMesh.new(), Vector3(0.25, 1.18, -0.17), dark)
             strap.mesh.size = Vector3(0.075, 0.64, 0.035)
+
+
+static func _limb(root: Node3D, pos: Vector3, radius: float, height: float, material: Material) -> Node3D:
+    var pivot := Node3D.new()
+    pivot.position = pos
+    root.add_child(pivot)
+    var capsule := CapsuleMesh.new()
+    capsule.radius = radius
+    capsule.height = height
+    var part := _mesh(pivot, capsule, Vector3(0, -height * 0.34, 0), material)
+    return pivot
+
+
+static func _mesh(root: Node3D, mesh: Mesh, pos: Vector3, material: Material) -> MeshInstance3D:
+    var node := MeshInstance3D.new()
+    node.mesh = mesh
+    node.position = pos
+    node.material_override = material
+    root.add_child(node)
+    return node
+
+
+static func _mat(color: Color) -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    material.albedo_color = color
+    material.roughness = 0.76
+    return material
