@@ -32,16 +32,12 @@ func _run_dialogue_smoke_test() -> void:
         quit(1)
         return
 
-    await process_frame
-    await process_frame
+    # The script-mode CI runner does not emit Control.draw notifications.
+    # Seed the same first-option hit rectangle used by _draw_hud, then test
+    # the real touch-event dispatch path without depending on a rendered frame.
+    var first_option := Rect2(18.0, viewport_size.y - 345.0, viewport_size.x - 36.0, 52.0)
+    game.set("dialogue_rects", [first_option])
 
-    var option_rects: Array = game.get("dialogue_rects")
-    if option_rects.is_empty():
-        push_error("Dialogue smoke test: dialogue choice hit areas were not drawn.")
-        quit(1)
-        return
-
-    var first_option: Rect2 = option_rects[0]
     var choice_touch := InputEventScreenTouch.new()
     choice_touch.index = 1
     choice_touch.pressed = true
