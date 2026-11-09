@@ -103,6 +103,12 @@ jobs:
             exit 1
           fi
 
+      - name: Godot Android touch dialogue smoke test
+        shell: bash
+        run: |
+          set -o pipefail
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot --path . --rendering-method gl_compatibility --rendering-driver opengl3 --audio-driver Dummy --script res://tests/dialogue_smoke.gd --verbose 2>&1 | tee godot-dialogue-smoke.log
+
       - name: Export Android APK
         shell: bash
         run: |
@@ -139,6 +145,7 @@ jobs:
             fi
           done
           echo "Verified Android APK, main store scene, gameplay scripts and ARM64 Godot runtime: $(stat -c%s "$APK") bytes."
+          echo "APK SHA-256: $(sha256sum "$APK" | awk '{print $1}')"
 
       - name: Upload export diagnostics
         if: always()
@@ -148,6 +155,7 @@ jobs:
           path: |
             godot-export.log
             godot-smoke.log
+            godot-dialogue-smoke.log
           if-no-files-found: ignore
 
       - name: Upload APK
