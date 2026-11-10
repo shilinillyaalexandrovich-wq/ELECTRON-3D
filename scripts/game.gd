@@ -505,6 +505,8 @@ func _input(event: InputEvent) -> void:
     var size := get_viewport().get_visible_rect().size
     var center := _get_joystick_center(size)
     action_button_rect = _get_action_button_rect(size)
+    if is_instance_valid(active_customer):
+        _update_dialogue_hit_rects(size)
     if event is InputEventScreenTouch:
         if event.pressed:
             if inventory_toggle_rect.has_point(event.position):
@@ -600,6 +602,13 @@ func _get_action_button_rect(size: Vector2) -> Rect2:
 func _clamp_action_button_center(size: Vector2) -> void:
     action_button_center.x = clampf(action_button_center.x, 98.0, size.x - 98.0)
     action_button_center.y = clampf(action_button_center.y, 300.0, size.y - 125.0)
+
+func _update_dialogue_hit_rects(size: Vector2) -> void:
+    dialogue_rects.clear()
+    if not is_instance_valid(active_customer):
+        return
+    for i in range(dialogue_options.size()):
+        dialogue_rects.append(Rect2(18.0, size.y - 345.0 + float(i) * 62.0, size.x - 36.0, 52.0))
 
 func _dialogue_option_at(position: Vector2) -> bool:
     for rect in dialogue_rects:
