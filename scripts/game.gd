@@ -38,6 +38,7 @@ var dialogue_options: Array[String] = []
 var dialogue_rects: Array[Rect2] = []
 var dialogue_quality := 0
 var dialogue_approach := 0
+var tutorial_grace_timer := 10.0
 var ui_font: Font
 
 func _ready() -> void:
@@ -258,8 +259,8 @@ func _spawn_customers() -> void:
     # Первые покупатели появляются в зоне досягаемости кнопки общения,
     # чтобы игрок мог начать консультацию сразу после входа в магазин.
     var spawn_points := [
-        Vector3(-7.0,0.0,1.5), Vector3(-2.5,0.0,0.2),
-        Vector3(2.5,0.0,0.2), Vector3(7.0,0.0,1.5)
+        Vector3(-2.0,0.0,2.0), Vector3(-0.7,0.0,1.5),
+        Vector3(0.7,0.0,1.5), Vector3(2.0,0.0,2.0)
     ]
     for i in range(4):
         var customer = CUSTOMER_SCRIPT.new()
@@ -289,6 +290,8 @@ func _spawn_competitors() -> void:
         competitor_service_time.append(0.0)
 
 func _update_competitors(delta: float) -> void:
+    if tutorial_grace_timer > 0.0:
+        return
     for i in range(competitor_nodes.size()):
         var seller := competitor_nodes[i]
         if not is_instance_valid(seller):
@@ -451,6 +454,7 @@ func _process(delta: float) -> void:
         message_time -= delta
         if message_time <= 0:
             message = "Найди покупателя и помоги ему с выбором."
+    tutorial_grace_timer = maxf(0.0, tutorial_grace_timer - delta)
     _update_competitors(delta)
     if is_instance_valid(active_customer) and active_customer.consume_patience(delta):
         _end_dialogue_without_sale()
@@ -515,7 +519,7 @@ func _input(event: InputEvent) -> void:
             if is_instance_valid(active_customer) and _dialogue_option_at(event.position):
                 _handle_dialogue_tap(event.position)
                 return
-            if not is_instance_valid(active_customer) and action_button_rect.has_point(event.position):
+            if not is_instance_valid(active_customer) and _is_action_touch(event.position, size):
                 _serve_customer()
                 return
             if joystick_touch == -1 and _is_joystick_touch_zone(event.position, size):
@@ -581,6 +585,11 @@ func _input(event: InputEvent) -> void:
                 action_button_center = event.position
                 _clamp_action_button_center(size)
                 action_button_rect = _get_action_button_rect(size)
+
+func _is_action_touch(pos: Vector2, size: Vector2) -> bool:
+    if action_button_rect.has_point(pos):
+        return true
+    return pos.x >= size.x * 0.55 and pos.y >= size.y * 0.55 and pos.y <= size.y * 0.84
 
 func _get_action_button_rect(size: Vector2) -> Rect2:
     if action_button_center == Vector2.ZERO:
