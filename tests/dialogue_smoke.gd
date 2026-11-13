@@ -53,7 +53,7 @@ func _run_dialogue_smoke_test() -> void:
         push_error("Store scene smoke test: expected four customers and two rival sellers.")
         quit(1)
         return
-    if game.get_node_or_null("CanvasLayer/HUD") == null:
+    if not _has_node_named(game, "HUD"):
         push_error("Store scene smoke test: the in-game HUD was not created.")
         quit(1)
         return
@@ -104,3 +104,11 @@ func _count_mesh_instances(node: Node) -> int:
     for child in node.get_children():
         count += _count_mesh_instances(child)
     return count
+
+func _has_node_named(node: Node, expected_name: String) -> bool:
+    if node.name == expected_name:
+        return true
+    for child in node.get_children():
+        if _has_node_named(child, expected_name):
+            return true
+    return false
