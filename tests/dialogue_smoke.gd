@@ -37,6 +37,33 @@ func _run_dialogue_smoke_test() -> void:
         quit(1)
         return
 
+    var player := game.get("player") as CharacterBody3D
+    var camera := game.get("camera") as Camera3D
+    var customers: Array = game.get("customers")
+    var competitors: Array = game.get("competitor_nodes")
+    if not is_instance_valid(player):
+        push_error("Store scene smoke test: the 3D player was not created.")
+        quit(1)
+        return
+    if not is_instance_valid(camera) or not camera.current:
+        push_error("Store scene smoke test: the active 3D camera was not created.")
+        quit(1)
+        return
+    if customers.size() < 4 or competitors.size() < 2:
+        push_error("Store scene smoke test: expected four customers and two rival sellers.")
+        quit(1)
+        return
+    if game.get_node_or_null("CanvasLayer/HUD") == null:
+        push_error("Store scene smoke test: the in-game HUD was not created.")
+        quit(1)
+        return
+    var mesh_count := _count_mesh_instances(game)
+    if mesh_count < 50:
+        push_error("Store scene smoke test: procedural 3D store geometry is incomplete (%d meshes)." % mesh_count)
+        quit(1)
+        return
+    print("Store scene smoke test passed: player, active camera, HUD, %d customers, %d rival sellers and %d 3D meshes." % [customers.size(), competitors.size(), mesh_count])
+
     # Walk through all conversation stages using the same touch path as Android.
     for expected_step in range(1, 4):
         _tap_dialogue_option(game, viewport_size, 0, expected_step)
@@ -71,3 +98,9 @@ func _tap_dialogue_option(game: Node, viewport_size: Vector2, option_index: int,
     touch.pressed = true
     touch.position = Vector2(viewport_size.x * 0.5, viewport_size.y - 345.0 + float(option_index) * 62.0 + 26.0)
     game.call("_input", touch)
+
+func _count_mesh_instances(node: Node) -> int:
+    var count: int = 1 if node is MeshInstance3D else 0
+    for child in node.get_children():
+        count += _count_mesh_instances(child)
+    return count
