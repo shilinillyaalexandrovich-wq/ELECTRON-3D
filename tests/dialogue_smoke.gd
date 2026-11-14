@@ -15,6 +15,38 @@ func _run_dialogue_smoke_test() -> void:
     await process_frame
 
     var viewport_size: Vector2 = game.get_viewport().get_visible_rect().size
+
+    # Exercise the same press-drag-release sequence used by the floating Android joystick.
+    var joystick_press := InputEventScreenTouch.new()
+    joystick_press.index = 7
+    joystick_press.pressed = true
+    joystick_press.position = Vector2(viewport_size.x * 0.15, viewport_size.y * 0.82)
+    game.call("_input", joystick_press)
+
+    var joystick_scale: float = float(game.call("_get_joystick_scale", viewport_size))
+    var joystick_drag := InputEventScreenDrag.new()
+    joystick_drag.index = 7
+    joystick_drag.position = joystick_press.position + Vector2(58.0 * joystick_scale, 0.0)
+    game.call("_input", joystick_drag)
+
+    var stick_vector: Vector2 = game.get("joystick_vector")
+    if stick_vector.x < 0.8:
+        push_error("Mobile controls smoke test: joystick drag did not produce rightward movement input.")
+        quit(1)
+        return
+
+    var joystick_release := InputEventScreenTouch.new()
+    joystick_release.index = 7
+    joystick_release.pressed = false
+    joystick_release.position = joystick_drag.position
+    game.call("_input", joystick_release)
+    var released_vector: Vector2 = game.get("joystick_vector")
+    if int(game.get("joystick_touch")) != -1 or released_vector.length() > 0.001:
+        push_error("Mobile controls smoke test: joystick state was not reset on touch release.")
+        quit(1)
+        return
+    print("Mobile controls smoke test passed: Android-style joystick press, drag and release.")
+
     var talk_touch := InputEventScreenTouch.new()
     talk_touch.index = 0
     talk_touch.pressed = true
