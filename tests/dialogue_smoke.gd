@@ -131,6 +131,13 @@ func _tap_dialogue_option(game: Node, viewport_size: Vector2, option_index: int,
     touch.position = Vector2(viewport_size.x * 0.5, viewport_size.y - 345.0 + float(option_index) * 62.0 + 26.0)
     game.call("_input", touch)
 
+    # Complete the same press-release lifecycle produced by a real Android tap.
+    var release := InputEventScreenTouch.new()
+    release.index = touch.index
+    release.pressed = false
+    release.position = touch.position
+    game.call("_input", release)
+
 func _count_mesh_instances(node: Node) -> int:
     var count: int = 1 if node is MeshInstance3D else 0
     for child in node.get_children():
