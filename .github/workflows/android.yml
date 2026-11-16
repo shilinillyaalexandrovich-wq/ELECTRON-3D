@@ -110,6 +110,9 @@ jobs:
           set -o pipefail
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot --path . --rendering-method gl_compatibility --rendering-driver opengl3 --audio-driver Dummy --script res://tests/dialogue_smoke.gd --verbose 2>&1 | tee godot-dialogue-smoke.log
 
+      - name: Verify rendered store scene preview
+        run: test -s "$RUNNER_TEMP/electron-store-preview.png"
+
       - name: Export Android APK
         shell: bash
         run: |
@@ -157,6 +160,7 @@ jobs:
             godot-export.log
             godot-smoke.log
             godot-dialogue-smoke.log
+            ${{ runner.temp }}/electron-store-preview.png
           if-no-files-found: ignore
 
       - name: Upload APK

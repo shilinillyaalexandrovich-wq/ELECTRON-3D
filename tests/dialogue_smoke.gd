@@ -13,6 +13,26 @@ func _run_dialogue_smoke_test() -> void:
     var game := packed_scene.instantiate()
     root.add_child(game)
     await process_frame
+    for _frame in range(2):
+        await process_frame
+    await RenderingServer.frame_post_draw
+
+    # Capture the rendered store scene so CI verifies visible output, not only node counts.
+    var preview_image: Image = game.get_viewport().get_texture().get_image()
+    if preview_image.is_empty():
+        push_error("Store scene preview: rendered viewport image is empty.")
+        quit(1)
+        return
+    var preview_directory := OS.get_environment("RUNNER_TEMP")
+    if preview_directory.is_empty():
+        preview_directory = OS.get_user_data_dir()
+    var preview_path := preview_directory.path_join("electron-store-preview.png")
+    var preview_error := preview_image.save_png(preview_path)
+    if preview_error != OK:
+        push_error("Store scene preview: could not save PNG (error %d)." % preview_error)
+        quit(1)
+        return
+    print("Store scene preview saved: %s (%dx%d)." % [preview_path, preview_image.get_width(), preview_image.get_height()])
 
     var viewport_size: Vector2 = game.get_viewport().get_visible_rect().size
 
