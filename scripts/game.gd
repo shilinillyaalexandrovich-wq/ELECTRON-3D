@@ -87,21 +87,21 @@ func _build_store() -> void:
     environment.background_color = Color(0.36, 0.43, 0.52)
     environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     environment.ambient_light_color = Color(0.72, 0.82, 0.96)
-    environment.ambient_light_energy = 0.82
+    environment.ambient_light_energy = 0.58
     environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
     world.environment = environment
     add_child(world)
 
     var light := DirectionalLight3D.new()
     light.rotation_degrees = Vector3(-55, -25, 0)
-    light.light_energy = 1.45
+    light.light_energy = 1.05
     light.shadow_enabled = true
     add_child(light)
 
     for x in [-7.0, -2.5, 2.5, 7.0]:
         var omni := OmniLight3D.new()
         omni.position = Vector3(x, 3.7, 0)
-        omni.light_energy = 1.0
+        omni.light_energy = 0.55
         omni.omni_range = 9
         add_child(omni)
 
@@ -391,7 +391,7 @@ func _draw_hud(hud: Control) -> void:
     inventory_toggle_rect = Rect2(size.x - 170, 24, 140, 46)
     hud.draw_rect(inventory_toggle_rect, Color(0.04,0.32,0.42,0.95), true)
     hud.draw_rect(inventory_toggle_rect, Color(0.2,0.82,1.0), false, 2.0)
-    hud.draw_string(ThemeDB.fallback_font, inventory_toggle_rect.position + Vector2(20,31), "СКЛАД / ЗАКАЗЫ", HORIZONTAL_ALIGNMENT_LEFT, 140, 16, Color.WHITE)
+    hud.draw_string(ThemeDB.fallback_font, inventory_toggle_rect.position + Vector2(4,31), "СКЛАД / ЗАКАЗЫ", HORIZONTAL_ALIGNMENT_CENTER, inventory_toggle_rect.size.x - 8, 13, Color.WHITE)
     close_day_rect = Rect2(size.x - 170, 78, 140, 42)
     hud.draw_rect(close_day_rect, Color(0.28,0.22,0.06,0.95), true)
     hud.draw_rect(close_day_rect, Color(0.95,0.72,0.22), false, 2.0)
